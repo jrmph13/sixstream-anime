@@ -470,7 +470,7 @@ app.get("/api/source/:linkId", wrap(async (req, res) => {
 const CDN_REFERERS = [
   { match: ["cinewave", "lostproject"],         ref: "https://megaplay.buzz/" },
   { match: ["watching.onl", "fxpy", "sugevideo"], ref: "https://vidwish.live/"  },
-  { match: ["cdn.hanime", "hanime.tv"],         ref: "https://hanime.tv/"     },
+  { match: ["cdn.hanime", "hanime.tv", "highwinds-cdn"], ref: "https://hanime.tv/" },
 ];
 function refererFor(url) {
   try {
@@ -576,6 +576,62 @@ app.get("/api/hls", wrap(async (req, res) => {
   res.setHeader("Content-Type", "video/MP2T");
   if (r.headers["content-length"]) res.setHeader("Content-Length", r.headers["content-length"]);
   r.data.pipe(res);
+}));
+
+// GET /api/hls-download?url=<m3u8>&name=<filename>
+// Streams the selected HLS source as one downloadable MP4.
+app.get("/api/hls-download", wrap(async (req, res) => {
+  const url = req.query.url;
+  if (!url || !String(url).startsWith("http")) {
+    return res.status(400).json({ success: false, message: "url required" });
+  }
+  if (!ffmpegPath) {
+    return res.status(500).json({ success: false, message: "ffmpeg-static is not available." });
+  }
+
+  const cleanName = String(req.query.name || "video")
+    .replace(/<[^>]*>/g, "")
+    .replace(/[\\/:*?"<>|]+/g, " ")
+    .replace(/\s+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120) || "video";
+  const filename = `6Stream-jrmph-${cleanName}.mp4`;
+  const referer = refererFor(url);
+  const origin = referer.endsWith("/") ? referer.slice(0, -1) : referer;
+
+  res.setHeader("Content-Type", "video/mp4");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.setHeader("Cache-Control", "no-store");
+
+  const ff = spawn(ffmpegPath, [
+    "-hide_banner",
+    "-loglevel", "error",
+    "-headers", `User-Agent: Mozilla/5.0\r\nReferer: ${referer}\r\nOrigin: ${origin}\r\nAccept: */*\r\n`,
+    "-i", String(url),
+    "-map", "0:v:0?",
+    "-map", "0:a:0?",
+    "-c", "copy",
+    "-bsf:a", "aac_adtstoasc",
+    "-movflags", "frag_keyframe+empty_moov",
+    "-f", "mp4",
+    "pipe:1",
+  ], { windowsHide: true });
+
+  ff.stdout.pipe(res);
+  let errText = "";
+  ff.stderr.on("data", chunk => { errText += chunk.toString(); });
+  ff.on("error", err => {
+    if (!res.headersSent) res.status(500).json({ success: false, message: err.message });
+    else res.destroy(err);
+  });
+  ff.on("close", code => {
+    if (code && !res.headersSent) {
+      res.status(500).json({ success: false, message: errText || `ffmpeg exited with ${code}` });
+    }
+  });
+  req.on("close", () => {
+    if (!ff.killed) ff.kill("SIGKILL");
+  });
 }));
 
 // GET /api/player?url=<embedUrl>  →  real m3u8 + subtitles from getSources API

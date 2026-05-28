@@ -1542,10 +1542,10 @@ async function selectServer(idx){
     const pm=`${API}/hls?url=${encodeURIComponent(m3u8)}`;
     const ep=currentEps[activeEpIdx]||{};
     const baseName=safeFileName(`${currentSlug||'anime'} episode ${ep.epNum||activeEpIdx+1}`);
-    const downloadUrl=`${pm}&download=1&name=${encodeURIComponent(baseName)}`;
+    const downloadUrl=`${API}/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(baseName)}`;
     const ps=(playerD.subtitles||[]).map(s=>({...s,url:`${API}/hls?url=${encodeURIComponent(s.url)}`}));
     playHLS(pm, ps, playerD.intro, playerD.outro, badge);
-    setDownload(downloadUrl, 'HD Download', `HLS source playlist (${sv.type.toUpperCase()} - ${sv.name})`, `6Stream-jrmph-${baseName}.m3u8`);
+    setDownload(downloadUrl, 'HD Download', `Full video MP4 (${sv.type.toUpperCase()} - ${sv.name})`, `6Stream-jrmph-${baseName}.mp4`);
     toast(`${sv.name} (${sv.type.toUpperCase()})`, true);
   }catch(e){
     document.getElementById('player').innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>${e.message}<br><small>Try another server.</small></div></div>`;
@@ -1665,6 +1665,8 @@ function hSelectSource(idx){
     }
     const proxied = `${API_ORIGIN}/api/hls?url=${encodeURIComponent(src.url)}`;
     playHLS(proxied, [], null, null, {label: src.quality || 'HLS', cls:'hls'});
+    const downloadUrl = `${API_ORIGIN}/api/hls-download?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent(baseName)}`;
+    setDownload(downloadUrl, 'HD Download', `Full video MP4 (${src.quality || 'HLS'})`, `6Stream-jrmph-${baseName}.mp4`);
     toast(`${src.quality || 'HLS'} stream`, true);
 
   } else {
