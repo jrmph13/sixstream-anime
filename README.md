@@ -15,7 +15,7 @@
 
 - Node.js 18+ recommended.
 - npm.
-- Vercel account if deploying to Vercel.
+- Render account if deploying to Render.
 
 Install dependencies:
 
@@ -69,6 +69,47 @@ http://localhost:3000/
 
 Important: CORS is browser protection. Tools like Postman can spoof headers, so use signed tokens or API keys if you need stronger protection.
 
+## Render Deployment
+
+Render is the recommended host for this project because it runs as a long-lived Express server. That fits the scraper/proxy routes better than short serverless functions.
+
+This repo includes `render.yaml`, so you can deploy as a Render Blueprint.
+
+### Option 1: Blueprint
+
+1. Push this repo to GitHub.
+2. In Render, choose **New +** -> **Blueprint**.
+3. Select this repository.
+4. Render will read `render.yaml`.
+5. Set `ACCESS_LIST_URL` in Render environment variables.
+6. Deploy.
+
+### Option 2: Manual Web Service
+
+Create a Render Web Service with:
+
+```text
+Runtime: Node
+Build Command: npm install
+Start Command: npm start
+Health Check Path: /
+```
+
+Environment variables:
+
+```bash
+NODE_ENV=production
+ACCESS_LIST_URL=<your_raw_access_txt_url>
+```
+
+After Render gives you a domain, add it to your `access.txt` allowlist:
+
+```text
+https://your-render-app.onrender.com/
+```
+
+Wait up to 5 minutes for the app to refresh the allowlist, or restart the Render service.
+
 ## Vercel Deployment
 
 This project is an Express server, so deploy it as a Node.js serverless entry. If your Vercel project does not detect the server automatically, add a `vercel.json` like this:
@@ -108,11 +149,11 @@ https://6stream.vercel.app/
 
 Then wait up to 5 minutes, or redeploy/restart the serverless function so the new allowlist is loaded.
 
-## Vercel Notes
+## Hosting Notes
 
 Some routes use Puppeteer and FFmpeg-style processing. These are heavier than standard JSON API routes and may hit Vercel serverless cold-start, memory, or timeout limits depending on your plan and traffic.
 
-If Vercel limits become a problem, keep the frontend on Vercel and host the API on a long-running Node host such as Railway, Render, Fly.io, or a VPS.
+Render, Railway, Fly.io, or a VPS are better fits for the API because the server can stay warm and keep browser/session state longer.
 
 ## API Routes
 

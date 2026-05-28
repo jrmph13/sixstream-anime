@@ -474,11 +474,12 @@ app.get("/api/hls", wrap(async (req, res) => {
     // m3u8 — rewrite all segment/playlist URLs through this proxy
     if (isM3U8req || body.startsWith("#EXTM3U")) {
       const base = url.substring(0, url.lastIndexOf("/") + 1);
+      const proxyBase = `${req.protocol}://${req.get("host")}`;
       const rewritten = body.replace(/^(?!#)(\S.*)$/gm, (line) => {
         line = line.trim();
         if (!line) return line;
         const abs = line.startsWith("http") ? line : base + line;
-        return `http://localhost:${PORT}/api/hls?url=${encodeURIComponent(abs)}`;
+        return `${proxyBase}/api/hls?url=${encodeURIComponent(abs)}`;
       });
       m3u8Cache.set(url, { text: rewritten, time: Date.now() });
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl; charset=utf-8");

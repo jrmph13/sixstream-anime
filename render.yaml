@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: 6stream
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ACCESS_LIST_URL
+        sync: false
