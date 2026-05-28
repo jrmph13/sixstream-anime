@@ -254,11 +254,10 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .player-box{background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;position:relative;isolation:isolate;container-type:inline-size;}
 .player-box video{width:100%;height:100%;display:block;background:#000;}
 
-/* WATERMARK — bottom-left, subtle, never overlaps controls */
-.player-box::after{content:"6stream";position:absolute;bottom:clamp(52px,9cqw,76px);left:clamp(10px,2cqw,18px);z-index:18;color:rgba(255,255,255,.28);font-size:clamp(.62rem,1.7cqw,1.1rem);font-weight:900;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.7);pointer-events:none;user-select:none;}
-.player-box.controls-idle::after{bottom:8px;}
+/* WATERMARK — top-right, subtle, never overlaps controls */
+.player-box::after{content:"6stream";position:absolute;top:clamp(8px,2cqw,16px);right:clamp(10px,2cqw,18px);z-index:18;color:rgba(255,255,255,.28);font-size:clamp(.62rem,1.7cqw,1.1rem);font-weight:900;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.7);pointer-events:none;user-select:none;}
 /* Fullscreen watermark — top-right, slightly bigger */
-.player-box:fullscreen::after,.player-box:-webkit-full-screen::after,.player-box.is-fullscreen::after{bottom:auto;top:clamp(14px,2vh,28px);left:auto;right:clamp(16px,2.5vw,36px);font-size:clamp(.9rem,1.6vw,1.5rem);color:rgba(255,255,255,.22);}
+.player-box:fullscreen::after,.player-box:-webkit-full-screen::after,.player-box.is-fullscreen::after{top:clamp(14px,2vh,28px);right:clamp(16px,2.5vw,36px);font-size:clamp(.9rem,1.6vw,1.5rem);color:rgba(255,255,255,.22);}
 
 .watch-type-badge{position:absolute;top:10px;left:10px;z-index:19;padding:5px 9px;border-radius:999px;background:rgba(15,23,42,.78);border:1px solid rgba(255,255,255,.16);font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(6px);}
 .watch-type-inline{display:inline-flex;vertical-align:middle;margin-left:8px;padding:3px 8px;border-radius:999px;background:var(--bg3);border:1px solid var(--border);font-size:.68rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;}
@@ -947,7 +946,8 @@ function heroHTML(items=[], kind='anime'){
 function renderHero(){
   const item=heroItems[heroIndex]||heroItems[0];
   if(!item) return '';
-  const img=item.poster||item.cover||'';
+  const rawImg=item.poster||item.cover||'';
+  const img=heroKind==='h'?hImg(rawImg):rawImg;
   const title=item.title||'Featured title';
   const sub=heroKind==='h'
     ? [item.duration?fmtDur(item.duration):null,item.views?`Views ${fmtViews(item.views)}`:null,(item.tags||[]).slice(0,2).join(', ')]
