@@ -548,9 +548,8 @@ app.get("/api/hls", wrap(async (req, res) => {
   }
 
   res.status(r.status);
-  res.setHeader("Content-Type", r.headers["content-type"] || "video/mp2t");
+  res.setHeader("Content-Type", "video/MP2T");
   if (r.headers["content-length"]) res.setHeader("Content-Length", r.headers["content-length"]);
-  if (r.headers["accept-ranges"]) res.setHeader("Accept-Ranges", r.headers["accept-ranges"]);
   r.data.pipe(res);
 }));
 

@@ -1442,7 +1442,9 @@ async function selectServer(idx){
     : {label:'Sub', cls:'sub'};
   document.getElementById('player').innerHTML=playerSkeleton(`Getting ${badge.label} stream...`);
   try{
-    const playerD=await api(`/api/stream/${encodeURIComponent(sv.linkId)}`);
+    const srcD=await api(`/api/source/${encodeURIComponent(sv.linkId)}`);
+    const embedUrl=srcD.data?.url; if(!embedUrl) throw new Error('No embed URL');
+    const playerD=await api(`/api/player?url=${encodeURIComponent(embedUrl)}`);
     const m3u8=playerD.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
     const pm=`${API}/hls?url=${encodeURIComponent(m3u8)}`;
     const ps=(playerD.subtitles||[]).map(s=>({...s,url:`${API}/hls?url=${encodeURIComponent(s.url)}`}));
@@ -1756,15 +1758,7 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
   }
 
   if(Hls.isSupported()){
-    const hls=new Hls({
-      enableWorker:true,
-      lowLatencyMode:true,
-      backBufferLength:45,
-      maxBufferLength:24,
-      maxMaxBufferLength:45,
-      fragLoadingTimeOut:20000,
-      manifestLoadingTimeOut:12000,
-    });
+    const hls=new Hls({enableWorker:true,lowLatencyMode:false});
     hls.loadSource(m3u8Url); hls.attachMedia(v);
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{ enhanceVideo('hv'); v.play().catch(()=>{}); });
     hls.on(Hls.Events.ERROR,(_,d)=>{
