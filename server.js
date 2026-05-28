@@ -36,6 +36,7 @@ const closeBrowser = async () => {
 };
 
 const app = express();
+app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
 const ACCESS_LIST_URL = process.env.ACCESS_LIST_URL || Buffer.from(
   "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2pybXBoMTMva2Fid2VuYmR2bndvYm53L3JlZnMvaGVhZHMvbWFpbi9hY2Nlc3MudHh0",
@@ -51,6 +52,14 @@ const normalizeOrigin = (value = "") => {
     return raw.replace(/\/+$/, "").toLowerCase();
   }
 };
+
+function publicOrigin(req) {
+  const host = req.get("x-forwarded-host") || req.get("host");
+  const forwardedProto = String(req.get("x-forwarded-proto") || "").split(",")[0].trim();
+  let proto = forwardedProto || req.protocol || "http";
+  if (host && !host.includes("localhost") && !host.startsWith("127.0.0.1")) proto = "https";
+  return `${proto}://${host}`;
+}
 
 const defaultAllowedOrigins = [
   normalizeOrigin("http://6stream.vercel.app/"),
@@ -516,7 +525,7 @@ app.get("/api/hls", wrap(async (req, res) => {
     // m3u8 — rewrite all segment/playlist URLs through this proxy
     if (isM3U8req || body.startsWith("#EXTM3U")) {
       const base = url.substring(0, url.lastIndexOf("/") + 1);
-      const proxyBase = `${req.protocol}://${req.get("host")}`;
+      const proxyBase = publicOrigin(req);
       const rewritten = body.replace(/^(?!#)(\S.*)$/gm, (line) => {
         line = line.trim();
         if (!line) return line;
