@@ -52,10 +52,13 @@ const normalizeOrigin = (value = "") => {
   }
 };
 
-let allowedOrigins = new Set([
+const defaultAllowedOrigins = [
   normalizeOrigin("http://6stream.vercel.app/"),
   normalizeOrigin("http://localhost:3000/"),
-]);
+  normalizeOrigin("https://6stream.onrender.com/"),
+];
+
+let allowedOrigins = new Set(defaultAllowedOrigins);
 let accessListLoaded = false;
 let accessListFetchedAt = 0;
 
@@ -71,7 +74,7 @@ async function refreshAllowedOrigins() {
       .map(normalizeOrigin)
       .filter(Boolean);
     if (next.length) {
-      allowedOrigins = new Set(next);
+      allowedOrigins = new Set([...defaultAllowedOrigins, ...next]);
       accessListLoaded = true;
       accessListFetchedAt = Date.now();
     }

@@ -106,6 +106,7 @@ After Render gives you a domain, add it to your `access.txt` allowlist:
 
 ```text
 https://your-render-app.onrender.com/
+https://6stream.onrender.com/
 ```
 
 Wait up to 5 minutes for the app to refresh the allowlist, or restart the Render service.
