@@ -56,6 +56,7 @@ const defaultAllowedOrigins = [
   normalizeOrigin("http://6stream.vercel.app/"),
   normalizeOrigin("http://localhost:3000/"),
   normalizeOrigin("https://6stream.onrender.com/"),
+  normalizeOrigin("https://sixstream.onrender.com/"),
 ];
 
 let allowedOrigins = new Set(defaultAllowedOrigins);
