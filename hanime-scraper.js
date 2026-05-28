@@ -209,6 +209,7 @@ async function getVideoInfo(slug) {
     .filter(Boolean);
 
   const sources = [];
+  let sourceError = null;
   if (meta.id) {
     try {
       const manifestRes = await client.get(
@@ -234,7 +235,8 @@ async function getVideoInfo(slug) {
       }
       sources.sort((a, b) => (parseInt(b.quality, 10) || 0) - (parseInt(a.quality, 10) || 0));
     } catch (e) {
-      console.error("[hanime] manifest error:", e.message);
+      sourceError = e.message || "manifest scrape failed";
+      console.error("[hanime] manifest error:", e.stack || e.message);
     }
   }
 
@@ -245,6 +247,7 @@ async function getVideoInfo(slug) {
     brands: meta.brand ? [{ id: meta.brand_id || null, title: meta.brand }] : [],
     franchise: null,
     sources,
+    sourceError,
     related: relatedByTags(hvs, slug, tagTexts, 16),
   };
 }

@@ -1603,7 +1603,10 @@ function hWatchPage(data){
     });
     svHTML+=`</div></div>`;
   }
-  if(!hCurrentSources.length) svHTML='<div class="empty" style="padding:8px;">No sources found.</div>';
+  if(!hCurrentSources.length) {
+    const err = data.sourceError ? ` Source scrape failed: ${data.sourceError}` : '';
+    svHTML=`<div class="empty" style="padding:8px;">No sources found.${err}</div>`;
+  }
   document.getElementById('servers').innerHTML=svHTML;
 
   // Related sidebar
