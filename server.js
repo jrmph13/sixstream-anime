@@ -18,17 +18,22 @@ const {
   getPlayerSources,
 } = require("./scraper");
 
-const {
-  getTrending,
-  getNew,
-  browse,
-  searchHentai,
-  getTags,
-  getBrands,
-  getVideoMeta,
-  getVideoInfo,
-  closeBrowser,
-} = require("./hanime-scraper");
+let hanimeScraper;
+const hanime = () => {
+  if (!hanimeScraper) hanimeScraper = require("./hanime-scraper");
+  return hanimeScraper;
+};
+const getTrending = (...args) => hanime().getTrending(...args);
+const getNew = (...args) => hanime().getNew(...args);
+const browse = (...args) => hanime().browse(...args);
+const searchHentai = (...args) => hanime().searchHentai(...args);
+const getTags = (...args) => hanime().getTags(...args);
+const getBrands = (...args) => hanime().getBrands(...args);
+const getVideoMeta = (...args) => hanime().getVideoMeta(...args);
+const getVideoInfo = (...args) => hanime().getVideoInfo(...args);
+const closeBrowser = async () => {
+  if (hanimeScraper) await hanimeScraper.closeBrowser();
+};
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +57,7 @@ let allowedOrigins = new Set([
   normalizeOrigin("http://localhost:3000/"),
 ]);
 let accessListLoaded = false;
+let accessListFetchedAt = 0;
 
 async function refreshAllowedOrigins() {
   try {
@@ -67,16 +73,22 @@ async function refreshAllowedOrigins() {
     if (next.length) {
       allowedOrigins = new Set(next);
       accessListLoaded = true;
+      accessListFetchedAt = Date.now();
     }
   } catch (err) {
     if (!accessListLoaded) console.warn("[cors] access list unavailable; using cached rules");
   }
 }
 
-refreshAllowedOrigins();
-setInterval(refreshAllowedOrigins, 5 * 60 * 1000).unref();
+if (require.main === module) {
+  refreshAllowedOrigins();
+  setInterval(refreshAllowedOrigins, 5 * 60 * 1000).unref();
+}
 
 app.use((req, res, next) => {
+  if (Date.now() - accessListFetchedAt > 5 * 60 * 1000) {
+    refreshAllowedOrigins();
+  }
   const origin = normalizeOrigin(req.headers.origin);
   const refererOrigin = normalizeOrigin(req.headers.referer);
   const requestOrigin = origin || refererOrigin;
