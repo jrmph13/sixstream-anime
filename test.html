@@ -401,6 +401,14 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
   .watch-eps{max-height:calc(100vh - 80px);}
   .video-controls{padding-top:22px;}
 }
+
+/* INSPECT GUARD */
+.inspect-guard{position:fixed;inset:0;z-index:9999;background:rgba(5,5,9,.94);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;text-align:center;padding:24px;}
+.inspect-guard.on{display:flex;}
+.inspect-card{max-width:420px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;box-shadow:0 26px 80px rgba(0,0,0,.5);}
+.inspect-card b{display:block;font-size:1.1rem;margin-bottom:8px;color:#fff;}
+.inspect-card span{display:block;color:var(--muted);font-size:.86rem;line-height:1.5;}
+.inspect-card small{display:block;margin-top:12px;color:var(--accent2);font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
 </style>
 </head>
 <body>
@@ -874,6 +882,53 @@ function stopCurrentVideo(){
     wrap.classList.remove('controls-idle');
     wrap.innerHTML='<div class="player-msg"><div class="pi">Play</div><div>Select a video</div></div>';
   }
+}
+
+function initInspectGuard(){
+  const guard=document.createElement('div');
+  guard.className='inspect-guard';
+  guard.innerHTML=`<div class="inspect-card">
+    <b>Protected Player</b>
+    <span>Developer tools were detected. Video playback is paused while inspection is open.</span>
+    <small>6stream security</small>
+  </div>`;
+  document.body.appendChild(guard);
+
+  let lastState=false;
+  const pauseAll=()=>{
+    document.querySelectorAll('video').forEach(v=>{ try{ v.pause(); }catch(_){} });
+  };
+  const setLocked=(state)=>{
+    if(state===lastState) return;
+    lastState=state;
+    guard.classList.toggle('on', state);
+    document.body.style.overflow=state?'hidden':'';
+    if(state) pauseAll();
+  };
+  const detect=()=>{
+    const gapW=Math.abs((window.outerWidth||0)-(window.innerWidth||0));
+    const gapH=Math.abs((window.outerHeight||0)-(window.innerHeight||0));
+    setLocked(gapW>180 || gapH>180);
+  };
+
+  window.addEventListener('resize',detect);
+  window.addEventListener('focus',detect);
+  document.addEventListener('visibilitychange',detect);
+  document.addEventListener('keydown',(e)=>{
+    const key=(e.key||'').toLowerCase();
+    const blocked=e.key==='F12' ||
+      (e.ctrlKey&&e.shiftKey&&['i','j','c'].includes(key)) ||
+      (e.ctrlKey&&['u','s'].includes(key));
+    if(blocked){
+      e.preventDefault();
+      e.stopPropagation();
+      setLocked(true);
+      return false;
+    }
+  },true);
+
+  setInterval(detect,900);
+  detect();
 }
 
 // ── ANIME SECTIONS ────────────────────────────────────────────────────────────
@@ -1622,6 +1677,7 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+initInspectGuard();
 goHome();
 </script>
 </body>
