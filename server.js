@@ -128,6 +128,9 @@ app.get("/favicon.ico", (_req, res) => res.status(204).end());
 
 // Serve test.html at root
 app.get("/", (req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.sendFile(require("path").join(__dirname, "test.html"));
 });
 

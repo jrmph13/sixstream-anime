@@ -597,7 +597,7 @@ body.theme-light .inspect-card b{color:#0f172a;}
 <div id="toast"></div>
 
 <script>
-const API_ORIGIN = window.location.origin;
+const API_ORIGIN = window.location.origin.replace(/\/$/, '');
 const API = `${API_ORIGIN}/api`;
 
 // ── State ─────────────────────────────────────────────────────────────────────
