@@ -597,7 +597,8 @@ body.theme-light .inspect-card b{color:#0f172a;}
 <div id="toast"></div>
 
 <script>
-const API = 'http://localhost:3000/api';
+const API_ORIGIN = window.location.origin;
+const API = `${API_ORIGIN}/api`;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let mode = 'anime'; // 'anime' | 'h'
@@ -623,7 +624,7 @@ function cset(k,d){ cache.set(k,{d,t:Date.now()}); }
 async function api(path){
   const cached = cget(path);
   if(cached) return cached;
-  const r = await fetch('http://localhost:3000' + path);
+  const r = await fetch(API_ORIGIN + path);
   const j = await r.json();
   if(!j.success) throw new Error(j.message||'API error');
   cset(path, j);
