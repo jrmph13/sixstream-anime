@@ -62,6 +62,11 @@ body.mode-h .drawer-actions button:hover,body.mode-h .drawer-wide-btn:hover{back
 .drawer-stat{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px;text-align:center;}
 .drawer-stat b{display:block;font-size:.95rem;color:var(--text);}
 .drawer-stat span{font-size:.63rem;color:var(--muted);}
+.about-card{display:flex;gap:11px;align-items:center;}
+.about-avatar{width:64px;height:64px;border-radius:12px;object-fit:cover;background:var(--bg3);border:1px solid var(--border);flex-shrink:0;}
+.about-copy b{display:block;font-size:.88rem;color:#fff;line-height:1.25;margin-bottom:4px;}
+.about-copy span{display:block;font-size:.72rem;color:var(--muted);line-height:1.45;}
+.about-pill{display:inline-flex;margin-top:7px;padding:3px 7px;border-radius:999px;background:rgba(124,58,237,.13);border:1px solid rgba(168,85,247,.35);color:var(--accent2);font-size:.64rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;}
 
 /* HERO CAROUSEL */
 .hero{position:relative;min-height:250px;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px;background:#050509;animation:heroIn .36s ease both;}
@@ -501,6 +506,18 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
         <div class="drawer-stat"><b>HD</b><span>Download</span></div>
         <div class="drawer-stat"><b>HLS</b><span>MP4</span></div>
         <div class="drawer-stat"><b>6S</b><span>6stream</span></div>
+      </div>
+    </div>
+    <div class="drawer-block">
+      <div class="drawer-label">About</div>
+      <div class="about-card">
+        <img class="about-avatar" src="https://i.ibb.co/TBF7Y2RW/IMG-20250920-081728.jpg" alt="Jhames Rhonnielle Martin" loading="lazy" onerror="this.style.opacity=0">
+        <div class="about-copy">
+          <b>Jhames Rhonnielle Martin</b>
+          <span>BSIS student, 19 years old.</span>
+          <span>Makati Science Institute of the Philippines.</span>
+          <em class="about-pill">Made by</em>
+        </div>
       </div>
     </div>
     <button class="drawer-wide-btn" onclick="stopCurrentVideo();closeDrawer()">Stop current video</button>
