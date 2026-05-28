@@ -163,8 +163,66 @@ async function getVideoMeta(slug) {
   };
 }
 
-// ── Video detail — puppeteer optional ────────────────────────────────────────
-// Falls back to metadata-only if puppeteer isn't available on this server.
+// ── WASM-signed API client ────────────────────────────────────────────────────
+// Gets a fresh signature from the running puppeteer page and uses it to call
+// authenticated hanime endpoints. The signature expires every ~5 minutes so
+// we re-fetch it from the page on each video request (it's a cheap evaluate).
+async function getSignedHeaders() {
+  try {
+    const puppeteer = require("puppeteer");
+    if (!_browser) {
+      _browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      });
+      _browser.on("disconnected", () => { _browser = null; });
+    }
+    // Reuse or open a signing page
+    let spage = _sigPage;
+    if (!spage || spage.isClosed()) {
+      spage = await _browser.newPage();
+      await spage.setRequestInterception(true);
+      spage.on("request", req => {
+        if (["image","font","stylesheet","media"].includes(req.resourceType())) req.abort();
+        else req.continue();
+      });
+      await spage.goto("https://hanime.tv/home", { waitUntil: "domcontentloaded", timeout: 25000 });
+      await spage.waitForFunction("window.stime > 0", { timeout: 15000 }).catch(() => {});
+      _sigPage = spage;
+    }
+    const auth = await spage.evaluate(() => ({ sig: window.ssignature || "", time: window.stime || 0 }));
+    return {
+      "User-Agent":           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept":               "application/json, */*",
+      "Accept-Encoding":      "gzip, deflate, br",
+      "Referer":              "https://hanime.tv/",
+      "Origin":               "https://hanime.tv",
+      "x-csrf-token":         "",
+      "x-session-token":      "",
+      "x-license":            "",
+      "x-user-license":       "",
+      "x-signature-version":  "web2",
+      "x-signature":          auth.sig,
+      "x-time":               String(auth.time),
+    };
+  } catch (_) {
+    // Fallback: empty signatures (works for search_hvs but not video detail)
+    return {
+      "User-Agent": "Mozilla/5.0",
+      "Accept": "application/json, */*",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Referer": "https://hanime.tv/",
+      "x-csrf-token": "", "x-session-token": "", "x-signature": "",
+      "x-time": "0", "x-signature-version": "web2",
+    };
+  }
+}
+let _sigPage = null;
+
+// ── Video detail ──────────────────────────────────────────────────────────────
+// Uses the WASM-signed API to get the real videos_manifest including stream URLs.
+// The stream URL (streamable.cloud) is returned as-is to the CLIENT — the browser
+// resolves it directly, which works for users with the hanime desktop app.
 async function getVideoInfo(slug) {
   const hvs  = await getHVS();
   const meta = hvs.find(v => v.slug === slug) || {};
@@ -182,33 +240,41 @@ async function getVideoInfo(slug) {
     .slice(0, 16)
     .map(parseCard).filter(Boolean);
 
-  // Sources: only the proxy embed is reliable cross-environment
-  const sources = [{
-    server:    "hanime-proxy",
-    url:       "/api/proxy?url=" + encodeURIComponent("https://hanime.tv/videos/hentai/" + slug),
+  // Fetch real stream data via authenticated API
+  const sources = [];
+  try {
+    const headers = await getSignedHeaders();
+    const apiRes = await client.get(
+      `https://cached.freeanimehentai.net/api/v8/video?id=${encodeURIComponent(slug)}`,
+      { headers, timeout: 15000 }
+    );
+    const manifest = apiRes.data?.videos_manifest;
+    for (const server of (manifest?.servers || [])) {
+      for (const stream of (server.streams || [])) {
+        if (!stream.url) continue;
+        sources.push({
+          server:    server.name  || server.slug || "hanime",
+          url:       stream.url,   // e.g. https://streamable.cloud/hls/stream.m3u8
+          quality:   stream.height ? `${stream.height}p` : "auto",
+          kind:      stream.kind  || (stream.url.includes(".m3u8") ? "hls" : "mp4"),
+          extension: stream.extension || null,
+          sizeMB:    stream.filesize_mbs || null,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[hanime] video API error:", e.message);
+  }
+
+  // Embed fallback (always available, video may not play without desktop app)
+  sources.push({
+    server:    "embed",
+    url:       "https://hanime.tv/videos/hentai/" + slug,
     quality:   "embed",
     kind:      "embed",
     extension: null,
     sizeMB:    null,
-  }];
-
-  // Try puppeteer for dl_url (best-effort, skip on error)
-  let dlUrl = null;
-  try {
-    const puppeteer = require("puppeteer");
-    dlUrl = await getPuppeteerDlUrl(puppeteer, slug);
-  } catch (_) { /* puppeteer unavailable */ }
-
-  if (dlUrl) {
-    sources.unshift({
-      server:    "pixeldrain",
-      url:       dlUrl,
-      quality:   "original",
-      kind:      "direct",
-      extension: null,
-      sizeMB:    null,
-    });
-  }
+  });
 
   return {
     ...card,

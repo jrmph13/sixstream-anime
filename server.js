@@ -807,6 +807,33 @@ app.get("/api/hanime/video/:slug", wrap(async (req, res) => {
   res.json({ success: true, data });
 }));
 
+// ── Image proxy (passes Referer so hotlink-protected CDNs return 200) ─────────
+app.get("/api/img-proxy", wrap(async (req, res) => {
+  const url = req.query.url;
+  if (!url || !url.startsWith("https://")) {
+    return res.status(400).send("bad url");
+  }
+  // Only allow known safe image CDNs
+  const allowed = ["hanime-cdn.com","hanime.tv","cdn.hanime","highwinds-cdn.com"];
+  const host = (() => { try { return new URL(url).hostname; } catch(_) { return ""; } })();
+  if (!allowed.some(h => host.endsWith(h))) {
+    return res.status(403).send("forbidden");
+  }
+  const imgRes = await axios.get(url, {
+    responseType: "stream",
+    timeout: 12000,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Referer": "https://hanime.tv/",
+      "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    },
+  });
+  res.setHeader("Content-Type", imgRes.headers["content-type"] || "image/jpeg");
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  imgRes.data.pipe(res);
+}));
+
 // ── Error handlers ────────────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
   console.error(`[Error] ${req.method} ${req.path}:`, err.message);

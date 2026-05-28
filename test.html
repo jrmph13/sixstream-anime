@@ -845,9 +845,13 @@ function card(a){
   </div>`;
 }
 
+// Route hanime-cdn.com images through our proxy (403 without Referer)
+function hImg(url){ return url ? `${API_ORIGIN}/api/img-proxy?url=${encodeURIComponent(url)}` : ''; }
+
 // ── HANIME CARDS ──────────────────────────────────────────────────────────────
 function hCard(v){
   const safeslug=(v.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const imgSrc=hImg(v.poster||v.cover||'');
   const dur=v.duration?`<span class="cb-dur">${fmtDur(v.duration)}</span>`:'';
   const views=v.views?`<span class="cb-views">Views ${fmtViews(v.views)}</span>`:'';
   const firstTag=v.tags&&v.tags[0]?`<div class="ci-s">${v.tags.slice(0,3).join(', ')}</div>`:'';
@@ -858,7 +862,7 @@ function hCard(v){
   ].filter(Boolean).slice(0,3);
   return `<div class="card" onclick="hOpenModal('${safeslug}')">
     <div class="ct">
-      <img src="${v.poster||v.cover||''}" loading="lazy" onerror="this.style.opacity=0"/>
+      <img src="${imgSrc}" loading="lazy" onerror="this.style.opacity=0"/>
       ${dur}${views}
     </div>
     <div class="ci">
@@ -1428,7 +1432,7 @@ async function hOpenModal(slug){
     ];
 
     document.getElementById('modal-top').innerHTML=`
-      <div class="modal-poster"><img src="${v.poster||v.cover||''}" onerror="this.style.opacity=0" alt=""/></div>
+      <div class="modal-poster"><img src="${hImg(v.poster||v.cover||'')}" onerror="this.style.opacity=0" alt=""/></div>
       <div class="modal-info">
         <h2>${v.title||''}</h2>
         <div class="tags" style="margin-bottom:6px;">
@@ -1580,21 +1584,13 @@ function hWatchPage(data){
   document.getElementById('player').innerHTML='<div class="player-msg"><div class="pi">Play</div><div>Select quality</div></div>';
 
   // Quality selector
-  const hlsSrcs = hCurrentSources.filter(s=>s.kind==='hls');
+  const hlsSrcs    = hCurrentSources.filter(s=>s.kind==='hls');
   const directSrcs = hCurrentSources.filter(s=>s.kind==='mp4'||s.kind==='direct');
-  const otherSrcs = hCurrentSources.filter(s=>!['hls','mp4','direct','embed'].includes(s.kind));
-  let svHTML=`<div class="detail-panel" style="margin:0 0 12px">
-    <div class="detail-title">Video Details</div>
-    <div class="detail-grid">
-      <div class="detail-row"><b>Title</b><span title="${data.title||''}">${data.title||'-'}</span></div>
-      <div class="detail-row"><b>Sources</b><span>${hCurrentSources.length}</span></div>
-      <div class="detail-row"><b>HLS</b><span>${hlsSrcs.length}</span></div>
-      <div class="detail-row"><b>MP4</b><span>${directSrcs.length}</span></div>
-    </div>
-  </div>`;
+  const embedSrcs  = hCurrentSources.filter(s=>s.kind==='embed');
+  let svHTML='';
   if(hlsSrcs.length){
-    svHTML+=`<div class="sv-grp"><div class="sv-lbl">HLS Stream</div><div class="sv-row">`;
-    hlsSrcs.forEach((s)=>{
+    svHTML+=`<div class="sv-grp"><div class="sv-lbl">Stream</div><div class="sv-row">`;
+    hlsSrcs.forEach(s=>{
       const gi=hCurrentSources.indexOf(s);
       svHTML+=`<button class="sv-btn hls" id="hsv-${gi}" onclick="hSelectSource(${gi})">${s.quality}</button>`;
     });
@@ -1602,28 +1598,28 @@ function hWatchPage(data){
   }
   if(directSrcs.length){
     svHTML+=`<div class="sv-grp"><div class="sv-lbl">Direct</div><div class="sv-row">`;
-    directSrcs.forEach((s)=>{
+    directSrcs.forEach(s=>{
       const gi=hCurrentSources.indexOf(s);
       svHTML+=`<button class="sv-btn mp4" id="hsv-${gi}" onclick="hSelectSource(${gi})">${s.quality}</button>`;
     });
     svHTML+=`</div></div>`;
   }
-  if(otherSrcs.length){
-    svHTML+=`<div class="sv-grp"><div class="sv-lbl">Other</div><div class="sv-row">`;
-    otherSrcs.forEach((s)=>{
+  if(embedSrcs.length){
+    svHTML+=`<div class="sv-grp"><div class="sv-lbl">Fallback</div><div class="sv-row">`;
+    embedSrcs.forEach(s=>{
       const gi=hCurrentSources.indexOf(s);
-      svHTML+=`<button class="sv-btn" id="hsv-${gi}" onclick="hSelectSource(${gi})">${s.quality}</button>`;
+      svHTML+=`<button class="sv-btn" id="hsv-${gi}" onclick="hSelectSource(${gi})" style="color:#fde68a;border-color:rgba(253,230,138,.4)">Embed</button>`;
     });
     svHTML+=`</div></div>`;
   }
-  if(!hCurrentSources.length) svHTML+='<div class="empty" style="padding:8px;">No sources found.</div>';
+  if(!hCurrentSources.length) svHTML='<div class="empty" style="padding:8px;">No sources found.</div>';
   document.getElementById('servers').innerHTML=svHTML;
 
   // Related sidebar
   document.getElementById('w-ep-title').textContent=`Related (${hCurrentRelated.length})`;
   document.getElementById('w-ep-list').innerHTML=hCurrentRelated.slice(0,20).map(r=>`
     <div class="rel-item" onclick="hOpenModal('${(r.slug||'').replace(/'/g,"\\'")}')">
-      <div class="rel-thumb"><img src="${r.poster||r.cover||''}" loading="lazy" onerror="this.style.opacity=0"/></div>
+      <div class="rel-thumb"><img src="${hImg(r.poster||r.cover||'')}" loading="lazy" onerror="this.style.opacity=0"/></div>
       <div class="rel-info">
         <div class="rel-title">${r.title||''}</div>
         <div class="rel-meta">${r.duration?fmtDur(r.duration):''} ${r.views?'· Views '+fmtViews(r.views):''}</div>
@@ -1670,28 +1666,30 @@ function hSelectSource(idx){
     toast('Download link ready', true);
 
   } else if(src.kind==='embed'){
-    // Embed the hanime.tv video page via proxy (ads stripped)
-    // Note: the video inside may require the hanime desktop app to play
-    const fullUrl = src.url.startsWith('http') ? src.url
-                  : `${API_ORIGIN}${src.url}`;
-    wrap.innerHTML=`<iframe src="${fullUrl}"
+    // Embed the hanime.tv video page via our ad-stripping proxy
+    const embedSrc = src.url.startsWith('http')
+      ? `${API_ORIGIN}/api/proxy?url=${encodeURIComponent(src.url)}`
+      : `${API_ORIGIN}${src.url}`;
+    wrap.innerHTML=`<iframe src="${embedSrc}"
       style="width:100%;height:100%;border:none;background:#000;"
       allowfullscreen allow="autoplay; fullscreen; encrypted-media"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock">
     </iframe>
     <div class="watch-type-badge" style="color:#fde68a;border-color:rgba(253,230,138,.5);">Embed</div>`;
-    toast('Embedded player (ads removed)', true);
+    toast('Embedded player', true);
 
-  } else {
-    // HLS — only real HLS URLs go here, not relative proxy paths
+  } else if(src.kind==='hls'){
+    // Play the stream URL DIRECTLY in the browser — no server proxy.
+    // streamable.cloud resolves in the user's browser if they have the hanime desktop app.
     if(!src.url.startsWith('http')){
       toast('Invalid stream URL', false);
       return;
     }
-    const proxyUrl=`${API}/hls?url=${encodeURIComponent(src.url)}`;
-    playHLS(proxyUrl, [], null, null, {label:'HLS', cls:'hls'});
-    setDownload(`${proxyUrl}&download=1&name=${encodeURIComponent(baseName)}`,'HD Download','HLS playlist',`6Stream-jrmph-${baseName}.m3u8`);
-    toast(`${src.quality} HLS`, true);
+    playHLS(src.url, [], null, null, {label: src.quality || 'HLS', cls:'hls'});
+    toast(`${src.quality || 'HLS'} stream`, true);
+
+  } else {
+    toast('Unknown source type', false);
   }
 }
 
