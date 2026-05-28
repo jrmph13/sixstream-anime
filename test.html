@@ -293,6 +293,15 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .sv-btn.dub.on{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd;}
 .sv-btn.hls.on{background:#065f46;border-color:#10b981;color:#6ee7b7;}
 .sv-btn.mp4.on{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd;}
+.download-panel{margin-top:10px;border:1px solid var(--border);background:var(--bg2);border-radius:8px;padding:10px;display:none;align-items:center;justify-content:space-between;gap:10px;}
+.download-panel.show{display:flex;}
+.download-copy{min-width:0;}
+.download-title{font-size:.78rem;font-weight:900;color:var(--text);}
+.download-note{font-size:.68rem;color:var(--muted);margin-top:2px;}
+.download-btn{display:inline-flex;align-items:center;gap:7px;white-space:nowrap;border:1px solid rgba(124,58,237,.55);background:var(--accent);color:#fff;text-decoration:none;border-radius:7px;padding:8px 12px;font-size:.76rem;font-weight:900;}
+.download-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+.download-btn:hover{filter:brightness(1.08);}
+@media(max-width:560px){.download-panel{align-items:flex-start;flex-direction:column}.download-btn{width:100%;justify-content:center;}}
 .watch-eps{display:flex;flex-direction:column;max-height:calc(100vh - 120px);}
 .w-ep-hd{font-size:.87rem;font-weight:700;margin-bottom:8px;flex-shrink:0;}
 .w-ep-scroll{overflow-y:auto;flex:1;}
@@ -585,6 +594,7 @@ body.theme-light .inspect-card b{color:#0f172a;}
           <div class="player-msg"><div class="pi">Play</div><div>Select a video</div></div>
         </div>
         <div id="servers" style="margin-top:10px;"></div>
+        <div id="download-panel" class="download-panel"></div>
       </div>
       <div class="watch-eps">
         <div class="w-ep-hd" id="w-ep-title">Episodes</div>
@@ -662,6 +672,32 @@ function serverSkeleton(){
     <button class="sv-btn" disabled>Sub</button>
     <button class="sv-btn" disabled>Dub</button>
   </div></div>`;
+}
+function safeFileName(name){
+  return String(name||'video')
+    .replace(/[\\/:*?"<>|]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim()
+    .slice(0,110) || 'video';
+}
+function downloadIcon(){
+  return '<svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>';
+}
+function clearDownload(){
+  const panel=document.getElementById('download-panel');
+  if(!panel) return;
+  panel.classList.remove('show');
+  panel.innerHTML='';
+}
+function setDownload(url, title='HD Download', note='6Stream source download', filename='6Stream-jrmph-video.mp4'){
+  const panel=document.getElementById('download-panel');
+  if(!panel || !url) return;
+  panel.innerHTML=`<div class="download-copy">
+    <div class="download-title">${title}</div>
+    <div class="download-note">${note}</div>
+  </div>
+  <a class="download-btn" href="${url}" target="_blank" rel="noopener" download="${filename}">${downloadIcon()}<span>Download</span></a>`;
+  panel.classList.add('show');
 }
 
 function showPage(id){
@@ -1385,6 +1421,7 @@ function watchFromModal(epIdx){
 function openWatch(slug, eps, startIdx=0){
   stopCurrentVideo();
   currentSlug=slug; currentEps=eps; currentSvs=[]; activeEpIdx=-1;
+  clearDownload();
   showPage('watch');
   document.getElementById('watch-err').innerHTML='';
   document.getElementById('player').innerHTML='<div class="player-msg"><div class="pi">Play</div><div>Select episode</div></div>';
@@ -1403,6 +1440,7 @@ function openWatch(slug, eps, startIdx=0){
 
 async function selectEp(idx){
   stopCurrentVideo();
+  clearDownload();
   activeEpIdx=idx;
   const ep=currentEps[idx]; if(!ep) return;
   document.querySelectorAll('.ep-row[id^=wep-]').forEach(r=>r.classList.remove('on'));
@@ -1435,6 +1473,7 @@ function renderServers(svs){
 
 async function selectServer(idx){
   const sv=currentSvs[idx]; if(!sv) return;
+  clearDownload();
   document.querySelectorAll('.sv-btn').forEach(b=>b.classList.remove('on'));
   document.getElementById('sv-'+idx)?.classList.add('on');
   const badge=sv.type==='dub'
@@ -1447,8 +1486,12 @@ async function selectServer(idx){
     const playerD=await api(`/api/player?url=${encodeURIComponent(embedUrl)}`);
     const m3u8=playerD.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
     const pm=`${API}/hls?url=${encodeURIComponent(m3u8)}`;
+    const ep=currentEps[activeEpIdx]||{};
+    const baseName=safeFileName(`${currentSlug||'anime'} episode ${ep.epNum||activeEpIdx+1}`);
+    const downloadUrl=`${pm}&download=1&name=${encodeURIComponent(baseName)}`;
     const ps=(playerD.subtitles||[]).map(s=>({...s,url:`${API}/hls?url=${encodeURIComponent(s.url)}`}));
     playHLS(pm, ps, playerD.intro, playerD.outro, badge);
+    setDownload(downloadUrl, 'HD Download', `HLS source playlist (${sv.type.toUpperCase()} - ${sv.name})`, `6Stream-jrmph-${baseName}.m3u8`);
     toast(`${sv.name} (${sv.type.toUpperCase()})`, true);
   }catch(e){
     document.getElementById('player').innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>${e.message}<br><small>Try another server.</small></div></div>`;
@@ -1459,6 +1502,7 @@ async function selectServer(idx){
 // ── HANIME WATCH ──────────────────────────────────────────────────────────────
 async function hStartWatch(slug){
   stopCurrentVideo();
+  clearDownload();
   showPage('watch');
   document.getElementById('watch-err').innerHTML='';
   document.getElementById('watch-title').textContent='Loading video...';
@@ -1477,6 +1521,7 @@ async function hStartWatch(slug){
 
 function hWatchPage(data){
   stopCurrentVideo();
+  clearDownload();
   hCurrentSources=data.sources||[];
   hCurrentRelated=data.related||[];
   showPage('watch');
@@ -1544,6 +1589,7 @@ function hWatchPage(data){
 
 function hSelectSource(idx){
   stopCurrentVideo();
+  clearDownload();
   const src=hCurrentSources[idx]; if(!src) return;
   document.querySelectorAll('[id^=hsv-]').forEach(b=>b.classList.remove('on'));
   document.getElementById('hsv-'+idx)?.classList.add('on');
@@ -1554,12 +1600,11 @@ function hSelectSource(idx){
     wrap.innerHTML=`<video id="hv" autoplay playsinline style="width:100%;height:100%;background:#000;">
       <source src="${src.url}" type="video/mp4">
     </video>
-    <div class="watch-type-badge mp4">MP4</div>
-    ${src.downloadUrl?`<div style="position:absolute;top:10px;left:10px;z-index:16;">
-      <a href="${src.downloadUrl}" target="_blank" rel="noopener" style="background:rgba(0,0,0,.7);color:#fff;padding:4px 10px;border-radius:5px;font-size:.75rem;text-decoration:none;margin-left:58px;">Download</a>
-    </div>`:''}`;
+    <div class="watch-type-badge mp4">MP4</div>`;
     enhanceVideo('hv');
     document.getElementById('hv')?.play().catch(()=>{});
+    const baseName=safeFileName(document.getElementById('watch-title')?.textContent||'hanime-video');
+    setDownload(src.downloadUrl||src.url, 'HD Download', src.downloadUrl?'Watermarked 6Stream MP4':'Direct MP4 source', `6Stream-jrmph-${baseName}.mp4`);
     toast('MP4 stream', true);
   } else if(src.kind==='direct'){
     wrap.innerHTML=`<div class="player-msg">
@@ -1567,11 +1612,15 @@ function hSelectSource(idx){
       <div>This source is a download page.</div>
       <a href="${src.url}" target="_blank" style="background:var(--accent);color:#fff;padding:7px 14px;border-radius:6px;font-size:.82rem;text-decoration:none;">Open Download</a>
     </div>`;
+    const baseName=safeFileName(document.getElementById('watch-title')?.textContent||'hanime-video');
+    setDownload(src.downloadUrl||src.url, 'HD Download', 'External source page', `6Stream-jrmph-${baseName}.mp4`);
     toast('Download link ready', true);
   } else {
     // HLS
     const proxyUrl=`${API}/hls?url=${encodeURIComponent(src.url)}`;
     playHLS(proxyUrl, [], null, null, {label:'HLS', cls:'hls'});
+    const baseName=safeFileName(document.getElementById('watch-title')?.textContent||'hanime-video');
+    setDownload(`${proxyUrl}&download=1&name=${encodeURIComponent(baseName)}`, 'HD Download', 'HLS source playlist', `6Stream-jrmph-${baseName}.m3u8`);
     toast(`${src.quality} HLS`, true);
   }
 }

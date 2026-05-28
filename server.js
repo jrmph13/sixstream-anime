@@ -493,6 +493,17 @@ app.get("/api/hls", wrap(async (req, res) => {
 
   const isM3U8req = url.includes(".m3u8");
   const isVttReq  = url.includes(".vtt");
+  const wantsDownload = req.query.download === "1";
+  const cleanDownloadName = String(req.query.name || "source")
+    .replace(/[\\/:*?"<>|]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 110) || "source";
+  const setPlaylistDownload = () => {
+    if (wantsDownload && isM3U8req) {
+      res.setHeader("Content-Disposition", `attachment; filename="6Stream-jrmph-${cleanDownloadName}.m3u8"`);
+    }
+  };
 
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", isM3U8req ? "no-cache" : "public, max-age=3600");
@@ -502,6 +513,7 @@ app.get("/api/hls", wrap(async (req, res) => {
     const { text, time } = m3u8Cache.get(url);
     if (Date.now() - time < M3U8_TTL) {
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl; charset=utf-8");
+      setPlaylistDownload();
       return res.send(text);
     }
     m3u8Cache.delete(url);
@@ -534,6 +546,7 @@ app.get("/api/hls", wrap(async (req, res) => {
       });
       m3u8Cache.set(url, { text: rewritten, time: Date.now() });
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl; charset=utf-8");
+      setPlaylistDownload();
       return res.send(rewritten);
     }
 
