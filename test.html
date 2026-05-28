@@ -14,6 +14,13 @@
 body.mode-h{
   --accent:#be185d;--accent2:#ec4899;
 }
+body.theme-light{
+  --bg:#f5f7fb;--bg2:#ffffff;--bg3:#eef2f7;
+  --text:#111827;--muted:#64748b;--card:#ffffff;--border:#d7dde8;
+}
+body.theme-light.mode-h{
+  --accent:#db2777;--accent2:#be185d;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;}
 
@@ -29,6 +36,9 @@ nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;h
 .mode-toggle{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px;flex-shrink:0;}
 .mt-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 11px;border-radius:5px;font-size:.78rem;font-weight:600;transition:all .18s;white-space:nowrap;}
 .mt-btn.on{background:var(--accent);color:#fff;}
+.theme-toggle{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px;width:max-content;}
+.theme-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:5px 10px;border-radius:5px;font-size:.75rem;font-weight:800;transition:all .18s;white-space:nowrap;}
+.theme-btn.on{background:var(--accent);color:#fff;}
 
 /* SEARCH */
 .sb{flex:1;max-width:400px;position:relative;}
@@ -439,6 +449,10 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
     <button class="mt-btn on" id="mt-anime" onclick="setMode('anime')">Anime</button>
     <button class="mt-btn"    id="mt-h"     onclick="setMode('h')">18+</button>
   </div>
+  <div class="theme-toggle">
+    <button class="theme-btn" id="th-dark" onclick="setTheme('dark')">Dark</button>
+    <button class="theme-btn" id="th-light" onclick="setTheme('light')">Light</button>
+  </div>
 
   <div class="sb">
     <input id="qi" type="text" placeholder="Search anime..." autocomplete="off"/>
@@ -473,6 +487,13 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
       <div class="mode-toggle" style="width:max-content">
         <button class="mt-btn on" id="d-mt-anime" onclick="setMode('anime');closeDrawer()">Anime</button>
         <button class="mt-btn" id="d-mt-h" onclick="setMode('h');closeDrawer()">18+</button>
+      </div>
+    </div>
+    <div class="drawer-block">
+      <div class="drawer-label">Theme</div>
+      <div class="theme-toggle">
+        <button class="theme-btn" id="d-th-dark" onclick="setTheme('dark')">Dark</button>
+        <button class="theme-btn" id="d-th-light" onclick="setTheme('light')">Light</button>
       </div>
     </div>
     <div class="drawer-block">
@@ -655,6 +676,20 @@ function drawerSearch(){
   qi.value=q;
   closeDrawer();
   doSearch();
+}
+
+function setTheme(theme){
+  const next=theme==='light'?'light':'dark';
+  document.body.classList.toggle('theme-light', next==='light');
+  ['th-dark','d-th-dark'].forEach(id=>document.getElementById(id)?.classList.toggle('on', next==='dark'));
+  ['th-light','d-th-light'].forEach(id=>document.getElementById(id)?.classList.toggle('on', next==='light'));
+  localStorage.setItem('sixstream-theme', next);
+}
+
+function initTheme(){
+  const saved=localStorage.getItem('sixstream-theme');
+  const prefersLight=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches;
+  setTheme(saved || (prefersLight?'light':'dark'));
 }
 
 function fmtViews(n){
@@ -937,20 +972,28 @@ function initInspectGuard(){
     const gapH=Math.abs((window.outerHeight||0)-(window.innerHeight||0));
     setLocked(gapW>180 || gapH>180);
   };
+  const block=(e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    setLocked(true);
+    return false;
+  };
 
   window.addEventListener('resize',detect);
   window.addEventListener('focus',detect);
   document.addEventListener('visibilitychange',detect);
+  document.addEventListener('contextmenu',block,true);
+  document.addEventListener('dragstart',block,true);
+  document.addEventListener('copy',block,true);
+  document.addEventListener('cut',block,true);
+  document.addEventListener('selectstart',block,true);
   document.addEventListener('keydown',(e)=>{
     const key=(e.key||'').toLowerCase();
     const blocked=e.key==='F12' ||
       (e.ctrlKey&&e.shiftKey&&['i','j','c'].includes(key)) ||
-      (e.ctrlKey&&['u','s'].includes(key));
+      (e.ctrlKey&&['u','s','p','c','x','a'].includes(key));
     if(blocked){
-      e.preventDefault();
-      e.stopPropagation();
-      setLocked(true);
-      return false;
+      return block(e);
     }
   },true);
 
@@ -1704,6 +1747,7 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+initTheme();
 initInspectGuard();
 goHome();
 </script>

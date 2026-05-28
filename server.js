@@ -112,6 +112,10 @@ app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", req.headers.origin);
     res.header("Vary", "Origin");
   }
+  res.header("X-Content-Type-Options", "nosniff");
+  res.header("X-Frame-Options", "SAMEORIGIN");
+  res.header("Referrer-Policy", "same-origin");
+  res.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Range");
   res.header("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges, Content-Disposition");
