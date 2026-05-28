@@ -1021,7 +1021,7 @@ function initInspectGuard(){
     }
   },true);
 
-  setInterval(detect,900);
+  setInterval(detect,2500);
   detect();
 }
 
@@ -1441,9 +1441,7 @@ async function selectServer(idx){
     : {label:'Sub', cls:'sub'};
   document.getElementById('player').innerHTML=playerSkeleton(`Getting ${badge.label} stream...`);
   try{
-    const srcD=await api(`/api/source/${encodeURIComponent(sv.linkId)}`);
-    const embedUrl=srcD.data?.url; if(!embedUrl) throw new Error('No embed URL');
-    const playerD=await api(`/api/player?url=${encodeURIComponent(embedUrl)}`);
+    const playerD=await api(`/api/stream/${encodeURIComponent(sv.linkId)}`);
     const m3u8=playerD.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
     const pm=`${API}/hls?url=${encodeURIComponent(m3u8)}`;
     const ps=(playerD.subtitles||[]).map(s=>({...s,url:`${API}/hls?url=${encodeURIComponent(s.url)}`}));
@@ -1739,7 +1737,7 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
     const lang=s.lang||s.srclang||(/english|eng/i.test(label)?'en':'');
     return `<track kind="subtitles" label="${escAttr(label)}" src="${escAttr(s.url)}" srclang="${escAttr(lang)}" ${s.default?'default':''}>`;
   }).join('');
-  wrap.innerHTML=`<video id="hv" autoplay playsinline crossorigin="anonymous" style="width:100%;height:100%;background:#000;">${tracks}</video>`;
+  wrap.innerHTML=`<video id="hv" autoplay playsinline preload="auto" crossorigin="anonymous" style="width:100%;height:100%;background:#000;">${tracks}</video>`;
   const v=document.getElementById('hv');
   if(badge?.label){
     wrap.insertAdjacentHTML('beforeend', `<div class="watch-type-badge ${badge.cls||''}">${badge.label}</div>`);
@@ -1757,7 +1755,15 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
   }
 
   if(Hls.isSupported()){
-    const hls=new Hls({enableWorker:true,lowLatencyMode:false});
+    const hls=new Hls({
+      enableWorker:true,
+      lowLatencyMode:true,
+      backBufferLength:45,
+      maxBufferLength:24,
+      maxMaxBufferLength:45,
+      fragLoadingTimeOut:20000,
+      manifestLoadingTimeOut:12000,
+    });
     hls.loadSource(m3u8Url); hls.attachMedia(v);
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{ enhanceVideo('hv'); v.play().catch(()=>{}); });
     hls.on(Hls.Events.ERROR,(_,d)=>{

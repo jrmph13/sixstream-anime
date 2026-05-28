@@ -132,6 +132,19 @@ app.get("/", (req, res) => {
 });
 
 const wrap = (fn) => (req, res, next) => fn(req, res, next).catch(next);
+const jsonCache = new Map();
+const cacheGet = (key) => {
+  const hit = jsonCache.get(key);
+  if (!hit || Date.now() > hit.expires) {
+    jsonCache.delete(key);
+    return null;
+  }
+  return hit.data;
+};
+const cacheSet = (key, data, ttlMs) => {
+  jsonCache.set(key, { data, expires: Date.now() + ttlMs });
+  return data;
+};
 
 // ── Docs ──────────────────────────────────────────────────────────────────────
 app.get("/api", (req, res) => {
@@ -295,39 +308,51 @@ app.get("/api/proxy", wrap(async (req, res) => {
 // ── Browse ─────────────────────────────────────────────────────────────────────
 // GET /api/all — scrapes all major sections in parallel and returns everything
 app.get("/api/all", wrap(async (req, res) => {
-  const [home, latest, popular, genres] = await Promise.all([
+  const key = "all:home";
+  const cached = cacheGet(key);
+  if (cached) return res.json(cached);
+
+  const [home, latest, popular] = await Promise.all([
     getHome().catch(() => null),
     getLatestUpdated(1).catch(() => []),
     getMostViewed(1).catch(() => []),
-    getGenres().catch(() => []),
   ]);
-  res.json({
+  const payload = {
     success: true,
     data: {
       featured: home?.featured || [],
       recent: home?.recent || [],
       latest,
       popular,
-      genres,
+      genres: [],
     },
-  });
+  };
+  res.json(cacheSet(key, payload, 2 * 60 * 1000));
 }));
 
 app.get("/api/home", wrap(async (req, res) => {
+  const cached = cacheGet("home");
+  if (cached) return res.json(cached);
   const data = await getHome();
-  res.json({ success: true, data });
+  res.json(cacheSet("home", { success: true, data }, 2 * 60 * 1000));
 }));
 
 app.get("/api/latest", wrap(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
+  const key = `latest:${page}`;
+  const cached = cacheGet(key);
+  if (cached) return res.json(cached);
   const data = await getLatestUpdated(page);
-  res.json({ success: true, page, total: data.length, data });
+  res.json(cacheSet(key, { success: true, page, total: data.length, data }, 2 * 60 * 1000));
 }));
 
 app.get("/api/popular", wrap(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
+  const key = `popular:${page}`;
+  const cached = cacheGet(key);
+  if (cached) return res.json(cached);
   const data = await getMostViewed(page);
-  res.json({ success: true, page, total: data.length, data });
+  res.json(cacheSet(key, { success: true, page, total: data.length, data }, 2 * 60 * 1000));
 }));
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -390,8 +415,11 @@ app.get("/api/anime/:slug", wrap(async (req, res) => {
 app.get("/api/servers", wrap(async (req, res) => {
   const key = req.query.key;
   if (!key) return res.status(400).json({ success: false, message: "Query param 'key' (episode serverKey) is required." });
+  const cacheKey = `servers:${key}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return res.json(cached);
   const data = await getServers(key);
-  res.json({ success: true, total: data.length, data });
+  res.json(cacheSet(cacheKey, { success: true, total: data.length, data }, 5 * 60 * 1000));
 }));
 
 // GET /api/sources/:slug/:epNum — all servers + embed URLs for an episode in one call
@@ -419,14 +447,17 @@ app.get("/api/sources/:slug/:epNum", wrap(async (req, res) => {
 // GET /api/source/:linkId
 // linkId is the `data-link-id` value on a server element from server list
 app.get("/api/source/:linkId", wrap(async (req, res) => {
+  const key = `source:${req.params.linkId}`;
+  const cached = cacheGet(key);
+  if (cached) return res.json(cached);
   const data = await getVideoSource(req.params.linkId);
-  res.json({ success: true, data });
+  res.json(cacheSet(key, { success: true, data }, 5 * 60 * 1000));
 }));
 
 // ── Referer map: CDN host → correct player origin ────────────────────────────
 const CDN_REFERERS = [
   { match: ["cinewave", "lostproject"],         ref: "https://megaplay.buzz/" },
-  { match: ["watching.onl", "fxpy"],            ref: "https://vidwish.live/"  },
+  { match: ["watching.onl", "fxpy", "sugevideo"], ref: "https://vidwish.live/"  },
   { match: ["cdn.hanime", "hanime.tv"],         ref: "https://hanime.tv/"     },
 ];
 function refererFor(url) {
@@ -506,11 +537,20 @@ app.get("/api/hls", wrap(async (req, res) => {
       "Referer": referer, "Origin": referer.slice(0, -1), "Accept": "*/*",
     },
     responseType: "stream",
+    validateStatus: (s) => s >= 200 && s < 500,
     timeout: 30000,
   });
 
-  res.setHeader("Content-Type", "video/MP2T");
+  if (r.status >= 400) {
+    res.status(r.status);
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    return res.send(`Upstream segment error ${r.status}`);
+  }
+
+  res.status(r.status);
+  res.setHeader("Content-Type", r.headers["content-type"] || "video/mp2t");
   if (r.headers["content-length"]) res.setHeader("Content-Length", r.headers["content-length"]);
+  if (r.headers["accept-ranges"]) res.setHeader("Accept-Ranges", r.headers["accept-ranges"]);
   r.data.pipe(res);
 }));
 
@@ -518,8 +558,32 @@ app.get("/api/hls", wrap(async (req, res) => {
 app.get("/api/player", wrap(async (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).json({ success: false, message: "url param required" });
+  const key = `player:${url}`;
+  const cached = cacheGet(key);
+  if (cached) return res.json(cached);
   const data = await getPlayerSources(url);
-  res.json({ success: true, embedUrl: url, ...data });
+  res.json(cacheSet(key, { success: true, embedUrl: url, ...data }, 5 * 60 * 1000));
+}));
+
+// GET /api/stream/:linkId -> embed URL + real HLS sources in one cached call
+app.get("/api/stream/:linkId", wrap(async (req, res) => {
+  const key = `stream:${req.params.linkId}`;
+  const cached = cacheGet(key);
+  if (cached) return res.json(cached);
+  const srcData = await getVideoSource(req.params.linkId);
+  if (!srcData?.url) throw new Error("No embed URL");
+  const player = await getPlayerSources(srcData.url);
+  const payload = {
+    success: true,
+    data: srcData,
+    embedUrl: srcData.url,
+    sources: player.sources,
+    subtitles: player.subtitles,
+    intro: player.intro,
+    outro: player.outro,
+    server: player.server,
+  };
+  res.json(cacheSet(key, payload, 5 * 60 * 1000));
 }));
 
 // GET /api/play/:slug/:epNum?type=sub&server=0
