@@ -708,24 +708,28 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route '${req.path}' not found. GET /api for docs.` });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`\n6stream API  → http://localhost:${PORT}/api`);
-  console.log(`Hanime API   → http://localhost:${PORT}/api/hanime\n`);
+module.exports = app;
 
-  getTrending(0, 1)
-    .then(() => console.log("[hanime] prewarm complete"))
-    .catch((err) => console.warn("[hanime] prewarm failed:", err.message));
-});
+if (!process.env.VERCEL) {
+  const server = app.listen(PORT, () => {
+    console.log(`\n6stream API  -> http://localhost:${PORT}/api`);
+    console.log(`Hanime API   -> http://localhost:${PORT}/api/hanime\n`);
 
-process.on("SIGINT",  async () => { await closeBrowser(); process.exit(0); });
-process.on("SIGTERM", async () => { await closeBrowser(); process.exit(0); });
+    getTrending(0, 1)
+      .then(() => console.log("[hanime] prewarm complete"))
+      .catch((err) => console.warn("[hanime] prewarm failed:", err.message));
+  });
 
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(`\n[Error] Port ${PORT} is already in use.`);
-    console.error(`Run this to free it:  npx kill-port ${PORT}\n`);
-    process.exit(1);
-  } else {
-    throw err;
-  }
-});
+  process.on("SIGINT", async () => { await closeBrowser(); process.exit(0); });
+  process.on("SIGTERM", async () => { await closeBrowser(); process.exit(0); });
+
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.error(`\n[Error] Port ${PORT} is already in use.`);
+      console.error(`Run this to free it:  npx kill-port ${PORT}\n`);
+      process.exit(1);
+    } else {
+      throw err;
+    }
+  });
+}
