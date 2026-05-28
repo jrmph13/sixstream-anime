@@ -447,14 +447,15 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 }
 
 /* INTRO OVERLAY */
-.intro-overlay{position:absolute;inset:0;z-index:30;background:#050509;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:introOut .45s 1.85s ease forwards;pointer-events:none;}
-.intro-logo{font-size:clamp(2rem,8cqw,4.2rem);font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#a855f7;text-shadow:0 0 40px rgba(168,85,247,.7);animation:introIn .55s .05s ease both;}
-.intro-bar{width:min(240px,58%);height:3px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;}
-.intro-fill{height:100%;border-radius:999px;background:var(--accent2);animation:introFill 1.6s ease forwards;}
-.intro-by{font-size:.72rem;color:rgba(255,255,255,.5);letter-spacing:.12em;text-transform:uppercase;animation:introIn .55s .35s ease both;}
-@keyframes introIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.intro-overlay{position:absolute;inset:0;z-index:30;background:#050509;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;animation:introOut .5s 1.9s ease forwards;pointer-events:none;}
+.intro-logo{font-size:clamp(2rem,8cqw,4.2rem);font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#ffffff;text-shadow:0 0 28px rgba(255,255,255,.55),0 0 72px rgba(168,85,247,.4);animation:introWhoosh .62s .04s cubic-bezier(.22,.68,0,1.2) both;}
+.intro-bar{width:min(240px,58%);height:3px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;}
+.intro-fill{height:100%;border-radius:999px;background:rgba(255,255,255,.7);animation:introFill 1.65s ease forwards;}
+.intro-by{font-size:.7rem;color:rgba(255,255,255,.42);letter-spacing:.16em;text-transform:uppercase;animation:introIn .5s .38s ease both;}
+@keyframes introWhoosh{from{opacity:0;transform:translateX(-60px) scaleX(.7);filter:blur(8px)}to{opacity:1;transform:translateX(0) scaleX(1);filter:blur(0)}}
+@keyframes introIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes introFill{from{width:0}to{width:100%}}
-@keyframes introOut{to{opacity:0}}
+@keyframes introOut{to{opacity:0;transform:scale(1.04)}}
 
 /* SKIP INTRO BTN */
 .skip-intro-btn{position:absolute;bottom:80px;right:14px;z-index:20;background:rgba(15,23,42,.88);color:#fff;border:1px solid rgba(255,255,255,.22);padding:7px 16px;border-radius:7px;cursor:pointer;font-size:.77rem;font-weight:700;backdrop-filter:blur(6px);display:none;transition:background .15s;}
@@ -1881,6 +1882,9 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
   // Remove intro overlay after animation (fallback)
   setTimeout(()=>document.getElementById('intro-overlay')?.remove(), 2500);
 
+  // Whoosh sound via Web Audio API
+  playWhoosh();
+
   if(Hls.isSupported()){
     const hls=new Hls({enableWorker:true,lowLatencyMode:false,startLevel:-1});
     _activeHls=hls;
@@ -1897,6 +1901,47 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
   } else {
     wrap.innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>HLS not supported.</div></div>`;
   }
+}
+
+// ── Whoosh SFX (Web Audio — no file needed) ───────────────────────────────────
+function playWhoosh(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+
+    // Pink-noise buffer
+    const bufLen=ctx.sampleRate*0.55;
+    const buf=ctx.createBuffer(1,bufLen,ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0;
+    for(let i=0;i<bufLen;i++){
+      const w=Math.random()*2-1;
+      b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
+      b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
+      b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
+      data[i]=(b0+b1+b2+b3+b4+b5+w*0.5362)*0.11;
+    }
+
+    const src=ctx.createBufferSource();
+    src.buffer=buf;
+
+    // Bandpass — gives the "whoosh" shape
+    const bp=ctx.createBiquadFilter();
+    bp.type='bandpass'; bp.frequency.setValueAtTime(600,ctx.currentTime);
+    bp.frequency.linearRampToValueAtTime(3200,ctx.currentTime+0.18);
+    bp.frequency.linearRampToValueAtTime(400,ctx.currentTime+0.52);
+    bp.Q.value=1.2;
+
+    // Gain envelope: fade in fast, fade out
+    const gain=ctx.createGain();
+    gain.gain.setValueAtTime(0,ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.9,ctx.currentTime+0.06);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.52);
+
+    src.connect(bp); bp.connect(gain); gain.connect(ctx.destination);
+    src.start(ctx.currentTime);
+    src.stop(ctx.currentTime+0.55);
+    src.onended=()=>ctx.close();
+  }catch(_){}
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
