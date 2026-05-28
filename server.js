@@ -710,7 +710,7 @@ app.use((req, res) => {
 
 module.exports = app;
 
-if (!process.env.VERCEL) {
+if (require.main === module) {
   const server = app.listen(PORT, () => {
     console.log(`\n6stream API  -> http://localhost:${PORT}/api`);
     console.log(`Hanime API   -> http://localhost:${PORT}/api/hanime\n`);
