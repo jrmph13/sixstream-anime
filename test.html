@@ -444,6 +444,8 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .inspect-card b{display:block;font-size:1.1rem;margin-bottom:8px;color:#fff;}
 .inspect-card span{display:block;color:var(--muted);font-size:.86rem;line-height:1.5;}
 .inspect-card small{display:block;margin-top:12px;color:var(--accent2);font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
+.inspect-card button{margin-top:16px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:900;padding:9px 18px;cursor:pointer;}
+body.theme-light .inspect-card b{color:#0f172a;}
 </style>
 </head>
 <body>
@@ -963,10 +965,12 @@ function initInspectGuard(){
     <b>Protected Player</b>
     <span>Developer tools were detected. Video playback is paused while inspection is open.</span>
     <small>6stream security</small>
+    <button type="button" id="inspect-continue">Continue</button>
   </div>`;
   document.body.appendChild(guard);
 
   let lastState=false;
+  let detectHits=0;
   const pauseAll=()=>{
     document.querySelectorAll('video').forEach(v=>{ try{ v.pause(); }catch(_){} });
   };
@@ -980,11 +984,22 @@ function initInspectGuard(){
   const detect=()=>{
     const gapW=Math.abs((window.outerWidth||0)-(window.innerWidth||0));
     const gapH=Math.abs((window.outerHeight||0)-(window.innerHeight||0));
-    setLocked(gapW>180 || gapH>180);
+    const suspected=gapW>320 || gapH>320;
+    detectHits=suspected?detectHits+1:0;
+    setLocked(detectHits>=3);
+  };
+  guard.querySelector('#inspect-continue').onclick=()=>{
+    detectHits=0;
+    setLocked(false);
   };
   const block=(e)=>{
     e.preventDefault();
     e.stopPropagation();
+    return false;
+  };
+  const blockHard=(e)=>{
+    block(e);
+    detectHits=3;
     setLocked(true);
     return false;
   };
@@ -996,14 +1011,13 @@ function initInspectGuard(){
   document.addEventListener('dragstart',block,true);
   document.addEventListener('copy',block,true);
   document.addEventListener('cut',block,true);
-  document.addEventListener('selectstart',block,true);
   document.addEventListener('keydown',(e)=>{
     const key=(e.key||'').toLowerCase();
     const blocked=e.key==='F12' ||
       (e.ctrlKey&&e.shiftKey&&['i','j','c'].includes(key)) ||
       (e.ctrlKey&&['u','s','p','c','x','a'].includes(key));
     if(blocked){
-      return block(e);
+      return blockHard(e);
     }
   },true);
 
