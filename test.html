@@ -253,8 +253,13 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 @media(max-width:860px){.watch-layout{grid-template-columns:1fr;}}
 .player-box{background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9;position:relative;isolation:isolate;container-type:inline-size;}
 .player-box video{width:100%;height:100%;display:block;background:#000;}
-.player-box::after{content:"6stream";position:absolute;top:clamp(9px,2.4cqw,30px);right:clamp(11px,2.8cqw,38px);z-index:18;color:rgba(255,255,255,.66);font-size:clamp(.95rem,3.6cqw,3.8rem);font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 3px 10px rgba(0,0,0,.92);pointer-events:none;}
-.player-box:fullscreen::after,.player-box:-webkit-full-screen::after,.player-box.is-fullscreen::after{font-size:clamp(2rem,4.2vw,4.8rem);top:clamp(18px,2.5vw,42px);right:clamp(22px,3vw,54px);}
+
+/* WATERMARK — bottom-left, subtle, never overlaps controls */
+.player-box::after{content:"6stream";position:absolute;bottom:clamp(52px,9cqw,76px);left:clamp(10px,2cqw,18px);z-index:18;color:rgba(255,255,255,.28);font-size:clamp(.62rem,1.7cqw,1.1rem);font-weight:900;letter-spacing:.1em;text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.7);pointer-events:none;user-select:none;}
+.player-box.controls-idle::after{bottom:8px;}
+/* Fullscreen watermark — top-right, slightly bigger */
+.player-box:fullscreen::after,.player-box:-webkit-full-screen::after,.player-box.is-fullscreen::after{bottom:auto;top:clamp(14px,2vh,28px);left:auto;right:clamp(16px,2.5vw,36px);font-size:clamp(.9rem,1.6vw,1.5rem);color:rgba(255,255,255,.22);}
+
 .watch-type-badge{position:absolute;top:10px;left:10px;z-index:19;padding:5px 9px;border-radius:999px;background:rgba(15,23,42,.78);border:1px solid rgba(255,255,255,.16);font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(6px);}
 .watch-type-inline{display:inline-flex;vertical-align:middle;margin-left:8px;padding:3px 8px;border-radius:999px;background:var(--bg3);border:1px solid var(--border);font-size:.68rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;}
 .watch-type-inline.sub{color:#6ee7b7;border-color:rgba(16,185,129,.55);}
@@ -263,23 +268,46 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .watch-type-badge.dub{color:#93c5fd;border-color:rgba(59,130,246,.5);}
 .watch-type-badge.hls{color:#6ee7b7;border-color:rgba(16,185,129,.5);}
 .watch-type-badge.mp4{color:#93c5fd;border-color:rgba(59,130,246,.5);}
-.video-controls{position:absolute;left:0;right:0;bottom:0;z-index:15;padding:34px 12px 10px;background:linear-gradient(transparent,rgba(0,0,0,.84));display:flex;flex-direction:column;gap:8px;opacity:1;transform:translateY(0);transition:opacity .22s ease,transform .22s ease;}
+
+/* VIDEO CONTROLS */
+.video-controls{position:absolute;left:0;right:0;bottom:0;z-index:15;padding:36px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.88));display:flex;flex-direction:column;gap:6px;opacity:1;transform:translateY(0);transition:opacity .22s ease,transform .22s ease;}
 .player-box.controls-idle .video-controls{opacity:0;transform:translateY(18px);pointer-events:none;}
 .player-box:not(.controls-idle):focus-within .video-controls{opacity:1;}
-.vc-progress{width:100%;accent-color:var(--accent);cursor:pointer;height:5px;}
-.vc-row{display:flex;align-items:center;gap:8px;}
-.vc-btn{width:32px;height:32px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.82);color:#fff;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;}
-.vc-btn svg{width:17px;height:17px;display:block;stroke:currentColor;fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;}
-.vc-btn:hover{background:var(--accent);}
-.vc-time{font-size:.72rem;color:#e5e7eb;font-variant-numeric:tabular-nums;min-width:92px;}
-.vc-vol{width:82px;accent-color:var(--accent);}
-.vc-speed{margin-left:auto;background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 7px;font-size:.74rem;outline:none;}
-.vc-sub{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 7px;font-size:.74rem;outline:none;max-width:142px;}
+.vc-progress{width:100%;accent-color:var(--accent);cursor:pointer;height:4px;margin-bottom:2px;}
+.vc-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:0;}
+.vc-btn{flex-shrink:0;width:34px;height:34px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.82);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
+.vc-btn svg{width:16px;height:16px;display:block;stroke:currentColor;fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;}
+.vc-btn:hover,.vc-btn:active{background:var(--accent);}
+.vc-time{font-size:.68rem;color:#e5e7eb;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;}
+.vc-vol{width:70px;accent-color:var(--accent);flex-shrink:0;}
+/* type badge inside controls — shows Sub/Dub/HLS */
+.vc-type{flex-shrink:0;padding:3px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.22);font-size:.6rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#e5e7eb;background:rgba(15,23,42,.72);white-space:nowrap;}
+.vc-type.sub{color:#6ee7b7;border-color:rgba(16,185,129,.6);}
+.vc-type.dub{color:#93c5fd;border-color:rgba(59,130,246,.6);}
+.vc-spacer{flex:1;min-width:0;}
+.vc-speed,.vc-sub,.vc-quality{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 6px;font-size:.72rem;outline:none;flex-shrink:0;max-width:90px;}
 .vc-sub:disabled{display:none;}
-.center-pop{position:absolute;left:50%;top:50%;z-index:20;width:78px;height:78px;border-radius:18px;background:rgba(0,0,0,.58);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;transform:translate(-50%,-50%) scale(.82);opacity:0;pointer-events:none;animation:centerPop .58s ease forwards;backdrop-filter:blur(6px);}
-.center-pop svg{width:38px;height:38px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* SUBTITLE POSITION — stays above controls, works in fullscreen */
+.player-box video::cue{background:rgba(0,0,0,.72);color:#fff;font-size:clamp(.8rem,2.4cqw,1.1rem);line-height:1.4;}
+.player-box:not(.controls-idle) video{--cue-bottom:64px;}
+.player-box.controls-idle video{--cue-bottom:12px;}
+/* Fullscreen subtitle push — done via JS class on the wrap */
+.player-box:fullscreen video::cue,.player-box:-webkit-full-screen video::cue,.player-box.is-fullscreen video::cue{font-size:clamp(1rem,2.2vw,1.4rem);}
+
+.center-pop{position:absolute;left:50%;top:50%;z-index:20;width:72px;height:72px;border-radius:16px;background:rgba(0,0,0,.58);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;transform:translate(-50%,-50%) scale(.82);opacity:0;pointer-events:none;animation:centerPop .58s ease forwards;backdrop-filter:blur(6px);}
+.center-pop svg{width:34px;height:34px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
 @keyframes centerPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.82)}18%{opacity:1;transform:translate(-50%,-50%) scale(1)}72%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
-@media(max-width:560px){.vc-vol{display:none}.vc-time{min-width:auto;font-size:.66rem}.vc-btn{width:30px;height:30px}.vc-speed,.vc-sub,.vc-quality{padding:4px 5px}}
+/* Mobile controls */
+@media(max-width:560px){
+  .vc-vol{display:none;}
+  .vc-time{font-size:.62rem;}
+  .vc-btn{width:36px;height:36px;}
+  .vc-btn svg{width:17px;height:17px;}
+  .vc-speed,.vc-sub,.vc-quality{padding:5px 5px;font-size:.68rem;max-width:72px;}
+  .video-controls{padding:30px 8px 6px;gap:5px;}
+  .vc-progress{height:5px;margin-bottom:1px;}
+}
 .player-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:.84rem;text-align:center;padding:20px;}
 .player-msg .pi{font-size:2.2rem;}
 .player-msg.err .pi{color:#ef4444;}
@@ -418,11 +446,10 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
   .detail-row span{font-size:.72rem;}
   #watch-title{font-size:.95rem!important;}
   .back{margin-bottom:10px;}
-  .player-box::after{font-size:clamp(.78rem,5vw,1.4rem);top:9px;right:9px;}
-  .vc-time{order:5;width:100%;font-size:.68rem;}
-  .vc-speed{height:30px;max-width:76px;}
-  .vc-sub{height:30px;max-width:98px;}
-  .vc-btn{width:30px;height:30px;}
+  .vc-speed{max-width:64px;font-size:.65rem;}
+  .vc-sub{max-width:80px;font-size:.65rem;}
+  .vc-quality{max-width:64px;font-size:.65rem;}
+  .vc-btn{width:36px;height:36px;}
 }
 @media(max-width:370px){
   main{padding:10px 8px;}
@@ -433,8 +460,8 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
   .hero-actions button{min-width:100%;font-size:.78rem;}
   .modal-poster{display:none;}
   .vc-vol{display:none;}
-  .vc-speed{font-size:.68rem;padding:4px;}
-  .vc-sub{font-size:.68rem;padding:4px;max-width:88px;}
+  .vc-speed,.vc-sub,.vc-quality{font-size:.64rem;padding:4px;max-width:64px;}
+  .vc-type{font-size:.56rem;padding:2px 5px;}
 }
 @media(max-height:520px) and (orientation:landscape){
   nav{position:relative;}
@@ -1657,7 +1684,7 @@ function ico(name){
   return icons[name]||'';
 }
 
-function enhanceVideo(videoId='hv', hlsInstance=null){
+function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
   const wrap=document.getElementById('player');
   const v=document.getElementById(videoId);
   if(!wrap||!v) return;
@@ -1673,6 +1700,8 @@ function enhanceVideo(videoId='hv', hlsInstance=null){
       <button class="vc-btn vc-mute" type="button" title="Mute">${ico('volume')}</button>
       <input class="vc-vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
       <span class="vc-time">0:00 / 0:00</span>
+      <span class="vc-type" id="vc-type-badge"></span>
+      <div class="vc-spacer"></div>
       <select class="vc-quality" aria-label="Quality" style="display:none">
         <option value="-1">Auto</option>
       </select>
@@ -1684,12 +1713,21 @@ function enhanceVideo(videoId='hv', hlsInstance=null){
         <option value="1.5">1.5x</option>
         <option value="2">2x</option>
       </select>
-      <select class="vc-sub" aria-label="Subtitle language" disabled>
+      <select class="vc-sub" aria-label="Subtitle" disabled>
         <option value="-1">Sub: Off</option>
       </select>
       <button class="vc-btn vc-full" type="button" title="Fullscreen">${ico('full')}</button>
     </div>`;
   wrap.appendChild(controls);
+
+  // Set Sub/Dub/HLS badge in controls
+  const typeBadge=controls.querySelector('#vc-type-badge');
+  if(typeBadge && badge?.label){
+    typeBadge.textContent=badge.label;
+    typeBadge.className='vc-type '+(badge.cls||'');
+  } else if(typeBadge){
+    typeBadge.style.display='none';
+  }
 
   const playBtn=controls.querySelector('.vc-play');
   const muteBtn=controls.querySelector('.vc-mute');
@@ -1890,14 +1928,14 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
     _activeHls=hls;
     hls.loadSource(m3u8Url); hls.attachMedia(v);
     hls.on(Hls.Events.MANIFEST_PARSED,()=>{
-      enhanceVideo('hv', hls);
+      enhanceVideo('hv', hls, badge);
       v.play().catch(()=>{});
     });
     hls.on(Hls.Events.ERROR,(_,d)=>{
       if(d.fatal) wrap.innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>HLS error: ${d.type}</div></div>`;
     });
   } else if(v.canPlayType('application/vnd.apple.mpegurl')){
-    v.src=m3u8Url; enhanceVideo('hv'); v.play().catch(()=>{});
+    v.src=m3u8Url; enhanceVideo('hv', null, badge); v.play().catch(()=>{});
   } else {
     wrap.innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>HLS not supported.</div></div>`;
   }
