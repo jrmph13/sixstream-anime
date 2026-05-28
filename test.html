@@ -1586,7 +1586,6 @@ function hWatchPage(data){
   // Quality selector
   const hlsSrcs    = hCurrentSources.filter(s=>s.kind==='hls');
   const directSrcs = hCurrentSources.filter(s=>s.kind==='mp4'||s.kind==='direct');
-  const embedSrcs  = hCurrentSources.filter(s=>s.kind==='embed');
   let svHTML='';
   if(hlsSrcs.length){
     svHTML+=`<div class="sv-grp"><div class="sv-lbl">Stream</div><div class="sv-row">`;
@@ -1604,14 +1603,6 @@ function hWatchPage(data){
     });
     svHTML+=`</div></div>`;
   }
-  if(embedSrcs.length){
-    svHTML+=`<div class="sv-grp"><div class="sv-lbl">Fallback</div><div class="sv-row">`;
-    embedSrcs.forEach(s=>{
-      const gi=hCurrentSources.indexOf(s);
-      svHTML+=`<button class="sv-btn" id="hsv-${gi}" onclick="hSelectSource(${gi})" style="color:#fde68a;border-color:rgba(253,230,138,.4)">Embed</button>`;
-    });
-    svHTML+=`</div></div>`;
-  }
   if(!hCurrentSources.length) svHTML='<div class="empty" style="padding:8px;">No sources found.</div>';
   document.getElementById('servers').innerHTML=svHTML;
 
@@ -1626,11 +1617,10 @@ function hWatchPage(data){
       </div>
     </div>`).join('') || '<div class="empty" style="padding:16px;font-size:.78rem">No related.</div>';
 
-  // Auto-select: prefer direct > hls > embed (embed is last resort iframe)
+  // Auto-select: prefer direct files first, then real scraped HLS streams.
   if(hCurrentSources.length){
     let preferred = hCurrentSources.findIndex(s=>s.kind==='mp4'||s.kind==='direct');
     if(preferred<0) preferred = hCurrentSources.findIndex(s=>s.kind==='hls');
-    if(preferred<0) preferred = hCurrentSources.findIndex(s=>s.kind==='embed');
     hSelectSource(preferred>=0?preferred:0);
   }
 }
@@ -1665,27 +1655,13 @@ function hSelectSource(idx){
     setDownload(src.url,'Download','Direct source',`6Stream-jrmph-${baseName}`);
     toast('Download link ready', true);
 
-  } else if(src.kind==='embed'){
-    // Embed the hanime.tv video page via our ad-stripping proxy
-    const embedSrc = src.url.startsWith('http')
-      ? `${API_ORIGIN}/api/proxy?url=${encodeURIComponent(src.url)}`
-      : `${API_ORIGIN}${src.url}`;
-    wrap.innerHTML=`<iframe src="${embedSrc}"
-      style="width:100%;height:100%;border:none;background:#000;"
-      allowfullscreen allow="autoplay; fullscreen; encrypted-media"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock">
-    </iframe>
-    <div class="watch-type-badge" style="color:#fde68a;border-color:rgba(253,230,138,.5);">Embed</div>`;
-    toast('Embedded player', true);
-
   } else if(src.kind==='hls'){
-    // Play the stream URL DIRECTLY in the browser — no server proxy.
-    // streamable.cloud resolves in the user's browser if they have the hanime desktop app.
     if(!src.url.startsWith('http')){
       toast('Invalid stream URL', false);
       return;
     }
-    playHLS(src.url, [], null, null, {label: src.quality || 'HLS', cls:'hls'});
+    const proxied = `${API_ORIGIN}/api/hls?url=${encodeURIComponent(src.url)}`;
+    playHLS(proxied, [], null, null, {label: src.quality || 'HLS', cls:'hls'});
     toast(`${src.quality || 'HLS'} stream`, true);
 
   } else {
@@ -1998,7 +1974,7 @@ function playWhoosh(){
     src.connect(bp); bp.connect(gain); gain.connect(ctx.destination);
     src.start(ctx.currentTime);
     src.stop(ctx.currentTime+0.55);
-    src.onended=()=>{ try{ ctx.close(); }catch(_){} };
+    src.onended=()=>{ try{ if(ctx.state!=='closed') ctx.close().catch(()=>{}); }catch(_){} };
   }catch(_){}
 }
 
