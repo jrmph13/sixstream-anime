@@ -43,7 +43,7 @@ const ACCESS_LIST_URL = process.env.ACCESS_LIST_URL || Buffer.from(
   "base64"
 ).toString("utf8");
 
-const API_PASS   = "jrmphpogi ko13aila";
+const API_PASS   = process.env.API_PASS || "jrmphpogi ko13aila";
 const GROQ_KEY   = "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";
 const TG_TOKEN   = "8842418430:AAGb7rvW7_7IpHxJj8I4pNtFoAP-bPaWbgc";
 const TG_CHAT_ID = "6187159572";
@@ -68,6 +68,7 @@ function publicOrigin(req) {
 
 const defaultAllowedOrigins = [
   normalizeOrigin("http://6stream.vercel.app/"),
+  normalizeOrigin("https://6stream.vercel.app/"),
   normalizeOrigin("http://localhost:3000/"),
   normalizeOrigin("https://6stream.onrender.com/"),
   normalizeOrigin("https://sixstream.onrender.com/"),
@@ -172,7 +173,14 @@ app.get("/", (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
-  res.sendFile(require("path").join(__dirname, "test.html"));
+  const fs = require("fs");
+  const path = require("path");
+  const html = fs.readFileSync(path.join(__dirname, "test.html"), "utf8")
+    .replace(
+      "</head>",
+      `<script>window.SIXSTREAM_API_PASS=${JSON.stringify(API_PASS)};</script></head>`
+    );
+  res.type("html").send(html);
 });
 
 const wrap = (fn) => (req, res, next) => fn(req, res, next).catch(next);

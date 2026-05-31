@@ -812,6 +812,15 @@ body.theme-light .inspect-card b{color:#0f172a;}
 <script>
 const API_ORIGIN = window.location.origin.replace(/\/$/, '');
 const API = `${API_ORIGIN}/api`;
+const API_PASS = window.SIXSTREAM_API_PASS || 'jrmphpogi ko13aila';
+
+function withApiPass(url){
+  return `${url}${url.includes('?')?'&':'?'}apipass=${encodeURIComponent(API_PASS)}`;
+}
+
+function apiUrl(path){
+  return withApiPass(API_ORIGIN + path);
+}
 
 let mode = 'anime'; // 'anime' | 'h'
 let currentSlug = null, currentEps = [], currentSvs = [], currentPage = 1;
@@ -836,7 +845,7 @@ function cset(k,d){ cache.set(k,{d,t:Date.now()}); }
 async function api(path){
   const cached = cget(path);
   if(cached) return cached;
-  const r = await fetch(API_ORIGIN + path);
+  const r = await fetch(apiUrl(path));
   const j = await r.json();
   if(!j.success) throw new Error(j.message||'API error');
   cset(path, j);
@@ -999,7 +1008,7 @@ function card(a){
 }
 
 // Route hanime-cdn.com images through our proxy (403 without Referer)
-function hImg(url){ return url ? `${API_ORIGIN}/api/img-proxy?url=${encodeURIComponent(url)}` : ''; }
+function hImg(url){ return url ? apiUrl(`/api/img-proxy?url=${encodeURIComponent(url)}`) : ''; }
 
 function hCard(v){
   const safeslug=(v.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -1690,11 +1699,11 @@ async function selectServer(idx){
     const embedUrl=srcD.data?.url; if(!embedUrl) throw new Error('No embed URL');
     const playerD=await api(`/api/player?url=${encodeURIComponent(embedUrl)}`);
     const m3u8=playerD.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
-    const pm=`${API}/hls?url=${encodeURIComponent(m3u8)}`;
+    const pm=apiUrl(`/api/hls?url=${encodeURIComponent(m3u8)}`);
     const ep=currentEps[activeEpIdx]||{};
     const baseName=safeFileName(`${currentAnimeTitle||currentSlug||'anime'} episode ${ep.epNum||activeEpIdx+1}`);
-    const downloadUrl=`${API}/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(baseName)}`;
-    const ps=(playerD.subtitles||[]).map(s=>({...s,url:`${API}/hls?url=${encodeURIComponent(s.url)}`}));
+    const downloadUrl=apiUrl(`/api/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(baseName)}`);
+    const ps=(playerD.subtitles||[]).map(s=>({...s,url:apiUrl(`/api/hls?url=${encodeURIComponent(s.url)}`)}));
     playHLS(pm, ps, playerD.intro, playerD.outro, badge);
     setDownload(downloadUrl, 'HD Download', `Full video MP4 (${sv.type.toUpperCase()} - ${sv.name})`, `6Stream-jhamesmartin-${baseName}.mp4`);
     toast(`${sv.name} (${sv.type.toUpperCase()})`, true);
@@ -1795,7 +1804,7 @@ function hSelectSource(idx){
     <div class="watch-type-badge mp4">MP4</div>`;
     enhanceVideo('hv');
     document.getElementById('hv')?.play().catch(()=>{});
-    const mp4DlUrl=`${API_ORIGIN}/api/dl?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent('6Stream-jhamesmartin-'+baseName+'.mp4')}`;
+    const mp4DlUrl=apiUrl(`/api/dl?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent('6Stream-jhamesmartin-'+baseName+'.mp4')}`);
     setDownload(mp4DlUrl,'HD Download','Direct MP4 source',`6Stream-jhamesmartin-${baseName}.mp4`);
     toast('MP4 stream', true);
 
@@ -1814,9 +1823,9 @@ function hSelectSource(idx){
       toast('Invalid stream URL', false);
       return;
     }
-    const proxied = `${API_ORIGIN}/api/hls?url=${encodeURIComponent(src.url)}`;
+    const proxied = apiUrl(`/api/hls?url=${encodeURIComponent(src.url)}`);
     playHLS(proxied, [], null, null, {label: src.quality || 'HLS', cls:'hls'});
-    const downloadUrl = `${API_ORIGIN}/api/hls-download?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent(baseName)}`;
+    const downloadUrl = apiUrl(`/api/hls-download?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent(baseName)}`);
     setDownload(downloadUrl, 'HD Download', `Full video MP4 (${src.quality || 'HLS'})`, `6Stream-jhamesmartin-${baseName}.mp4`);
     toast(`${src.quality || 'HLS'} stream`, true);
 
@@ -2315,7 +2324,7 @@ async function sendChat(){
   chatHistory.push({role:'user',content:msg});
   const typing=addMsg('...','a typing');
   try{
-    const r=await fetch(`${API_ORIGIN}/api/chat`,{
+    const r=await fetch(apiUrl('/api/chat'),{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({message:msg,history:chatHistory.slice(-8)}),
@@ -2379,7 +2388,7 @@ async function submitRating(){
   const feedback=(document.getElementById('rat-feedback')?.value||'').trim();
   document.querySelector('.rat-overlay')?.remove();
   try{
-    await fetch(`${API_ORIGIN}/api/rate`,{
+    await fetch(apiUrl('/api/rate'),{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({rating:_ratSel,anime:_ratAnime,episode:_ratEp,feedback}),
     });

@@ -11,33 +11,42 @@
 const axios = require("axios");
 const axiosRetry = require("axios-retry").default;
 
+const HANIME_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "application/json, text/plain, */*",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Referer": "https://hanime.tv/",
+  "Origin": "https://hanime.tv",
+  "x-csrf-token": "",
+  "x-session-token": "",
+  "x-license": "",
+  "x-user-license": "",
+  "x-signature-version": "web2",
+  "x-signature": "",
+  "x-time": "0",
+};
+
 const client = axios.create({
-  headers: {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Referer": "https://hanime.tv/",
-    "Origin": "https://hanime.tv",
-    "x-csrf-token": "",
-    "x-session-token": "",
-    "x-license": "",
-    "x-user-license": "",
-    "x-signature-version": "web2",
-    "x-signature": "",
-    "x-time": "0",
-  },
+  headers: HANIME_HEADERS,
   decompress: true,
   timeout: 30000,
 });
 axiosRetry(client, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 
-const HVS_URL = "https://cached.freeanimehentai.net/api/v10/search_hvs";
+const HVS_URL = process.env.HANIME_HVS_URL || "https://cached.freeanimehentai.net/api/v10/search_hvs";
+const HANIME_API_BASES = (process.env.HANIME_API_BASES || "https://cached.freeanimehentai.net")
+  .split(",")
+  .map(s => s.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
 const HVS_TTL = 30 * 60 * 1000;
+const SIGNED_HEADERS_TTL = 10 * 60 * 1000;
 
 let _hvs = null;
 let _hvsTime = 0;
 let _browser = null;
 let _sigPage = null;
+let _signedHeaders = null;
+let _signedHeadersTime = 0;
 
 function parseCard(v) {
   if (!v) return null;
@@ -164,7 +173,20 @@ async function getVideoMeta(slug) {
   };
 }
 
-async function getSignedHeaders() {
+function isAuthError(err) {
+  return err?.response?.status === 401 || err?.response?.status === 403;
+}
+
+function resetSignedHeaders() {
+  _signedHeaders = null;
+  _signedHeadersTime = 0;
+}
+
+async function getSignedHeaders({ force = false } = {}) {
+  if (!force && _signedHeaders && Date.now() - _signedHeadersTime < SIGNED_HEADERS_TTL) {
+    return _signedHeaders;
+  }
+
   const puppeteer = require("puppeteer");
   if (!_browser) {
     _browser = await puppeteer.launch({
@@ -185,6 +207,10 @@ async function getSignedHeaders() {
       else req.continue();
     });
     await _sigPage.goto("https://hanime.tv/home", { waitUntil: "domcontentloaded", timeout: 25000 });
+  } else if (force) {
+    await _sigPage.reload({ waitUntil: "domcontentloaded", timeout: 25000 }).catch(async () => {
+      await _sigPage.goto("https://hanime.tv/home", { waitUntil: "domcontentloaded", timeout: 25000 });
+    });
   }
 
   await _sigPage.waitForFunction("window.stime > 0 && window.ssignature", { timeout: 15000 }).catch(() => {});
@@ -193,11 +219,36 @@ async function getSignedHeaders() {
     time: window.stime || 0,
   }));
 
-  return {
-    ...client.defaults.headers.common,
+  _signedHeaders = {
+    ...HANIME_HEADERS,
     "x-signature": auth.sig,
     "x-time": String(auth.time),
   };
+  _signedHeadersTime = Date.now();
+  return _signedHeaders;
+}
+
+async function fetchVideoManifest(videoId) {
+  let lastErr;
+
+  for (const base of HANIME_API_BASES) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const headers = await getSignedHeaders({ force: attempt > 0 });
+        return await client.get(
+          `${base}/api/v8/guest/videos/${videoId}/manifest`,
+          { headers, timeout: 15000 }
+        );
+      } catch (err) {
+        lastErr = err;
+        if (!isAuthError(err)) break;
+        resetSignedHeaders();
+        console.warn(`[hanime] manifest auth ${err.response.status}; refreshing signature and retrying`);
+      }
+    }
+  }
+
+  throw lastErr;
 }
 
 async function getVideoInfo(slug) {
@@ -212,10 +263,7 @@ async function getVideoInfo(slug) {
   let sourceError = null;
   if (meta.id) {
     try {
-      const manifestRes = await client.get(
-        `https://cached.freeanimehentai.net/api/v8/guest/videos/${meta.id}/manifest`,
-        { headers: await getSignedHeaders(), timeout: 15000 }
-      );
+      const manifestRes = await fetchVideoManifest(meta.id);
       const servers = manifestRes.data?.videos_manifest?.servers || [];
       for (const server of servers) {
         for (const stream of (server.streams || [])) {
@@ -253,6 +301,7 @@ async function getVideoInfo(slug) {
 }
 
 async function closeBrowser() {
+  resetSignedHeaders();
   if (_browser) {
     try { await _browser.close(); } catch (_) {}
     _browser = null;
