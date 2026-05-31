@@ -506,7 +506,7 @@ app.get("/api/hls", wrap(async (req, res) => {
     .slice(0, 110) || "source";
   const setPlaylistDownload = () => {
     if (wantsDownload && isM3U8req) {
-      res.setHeader("Content-Disposition", `attachment; filename="6Stream-jrmph-${cleanDownloadName}.m3u8"`);
+      res.setHeader("Content-Disposition", `attachment; filename="6Stream-jhamesmartin-${cleanDownloadName}.m3u8"`);
     }
   };
 
@@ -600,7 +600,7 @@ app.get("/api/hls-download", wrap(async (req, res) => {
     .replace(/\s+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 120) || "video";
-  const filename = `6Stream-jrmph-${cleanName}.mp4`;
+  const filename = `6Stream-jhamesmartin-${cleanName}.mp4`;
   const referer = refererFor(url);
   const origin = referer.endsWith("/") ? referer.slice(0, -1) : referer;
 
@@ -788,7 +788,7 @@ app.get("/api/hanime/pixeldrain/:id/watermarked", wrap(async (req, res) => {
     .replace(/\s+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 120) || id;
-  const filename = `6Stream-jrmph-${rawName}.mp4`;
+  const filename = `6Stream-jhamesmartin-${rawName}.mp4`;
 
   res.setHeader("Content-Type", "video/mp4");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -898,81 +898,162 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
 // ── Secret API Docs ───────────────────────────────────────────────────────────
 app.get("/jopay/jhames/api/doc/", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
-  res.json({
-    name: "6stream Scraper API — Full Documentation",
-    version: "1.0",
-    auth: {
-      description: "When calling from an external/unlisted domain, append ?apipass=<key> to every request.",
-      param: "apipass",
-      example: "/api/home?apipass=jrmphpogi ko13aila",
-    },
-    cors: {
-      whitelisted_domains: [...defaultAllowedOrigins].filter(Boolean),
-      unlisted_domains: "Must supply ?apipass=<key> on every request.",
-    },
-    sections: {
-      "General": {
-        "GET /api": "Short endpoint listing (public)",
-        "GET /api/all": "Home + latest + popular in one call (cached 2 min)",
-        "GET /api/home": "Featured & recent anime (cached 2 min)",
-        "GET /api/latest?page=1": "Latest updated anime",
-        "GET /api/popular?page=1": "Most viewed anime",
-        "GET /api/search?q=<query>": "Search anime by title",
-        "GET /api/genres": "All genres",
-        "GET /api/genre/:genreId?page=1": "Anime by genre",
-        "GET /api/type/:type?page=1": "Anime by type — tv | movie | ova | ona | special | music",
-        "GET /api/status/:status?page=1": "Anime by status — currently-airing | finished-airing | not-yet-aired",
-      },
-      "Anime Detail & Episodes": {
-        "GET /api/anime/:slug": "Anime info + numericId",
-        "GET /api/anime/:slug/episodes": "Episode list (pass ?id=<numericId> to skip extra fetch)",
-        "GET /api/servers?key=<serverKey>": "Server list for an episode (serverKey = episode data-ids)",
-        "GET /api/source/:linkId": "Embed URL for a server (linkId = server data-link-id)",
-        "GET /api/sources/:slug/:epNum": "All servers + embed URLs for an episode in one call",
-      },
-      "Stream Pipeline (no browser needed)": {
-        "GET /api/stream/:linkId": "Embed URL + real HLS m3u8 + subtitles (linkId → full stream)",
-        "GET /api/player?url=<embedUrl>": "Real m3u8 + subtitles from embed URL",
-        "GET /api/play/:slug/:epNum?type=sub&server=0": "Full pipeline: anime → episode → embed → m3u8",
-        flow: [
-          "1. GET /api/anime/:slug              → get numericId",
-          "2. GET /api/anime/:slug/episodes     → get episodes (each has epId, serverKey)",
-          "3. GET /api/servers?key={serverKey}  → get servers (each has linkId, name, type)",
-          "4. GET /api/source/:linkId           → get embed URL",
-          "5. GET /api/player?url={embedUrl}    → get real m3u8 + subtitles",
-          "   OR use /api/stream/:linkId        → steps 4+5 in one call",
-          "   OR use /api/play/:slug/:epNum     → steps 1-5 in one call",
-        ],
-      },
-      "Proxy / Utility": {
-        "GET /api/proxy?url=<pageUrl>": "Proxies an embed page with ad-blocking injected",
-        "GET /api/hls?url=<m3u8Url>": "HLS proxy — rewrites all segment URLs through this server",
-        "GET /api/hls?url=<m3u8Url>&download=1&name=<title>": "Download m3u8 playlist file",
-        "GET /api/hls-download?url=<m3u8Url>&name=<title>": "Stream full HLS as a single downloadable MP4 (via ffmpeg)",
-        "GET /api/img-proxy?url=<imageUrl>": "Image proxy for hotlink-protected CDN images (hanime CDN only)",
-      },
-      "Hanime.tv": {
-        "GET /api/hanime": "Hanime endpoint listing",
-        "GET /api/hanime/trending?page=0&per_page=24": "Trending videos",
-        "GET /api/hanime/new?page=0&per_page=24&ordering=created_at_unix": "Newest videos",
-        "GET /api/hanime/browse?page=0&per_page=24&tags=tag1,tag2&brands=brand1&ordering=created_at_unix": "Browse with filters",
-        "GET /api/hanime/search?q=<query>&page=0&per_page=24&tags=tag1,tag2&brands=brand1": "Search hanime",
-        "GET /api/hanime/tags": "All tags",
-        "GET /api/hanime/brands": "All brands/studios",
-        "GET /api/hanime/meta/:slug": "Fast metadata from search index",
-        "GET /api/hanime/video/:slug": "Video detail + clean CDN stream URLs (no ads)",
-        "GET /api/hanime/pixeldrain/:id": "Proxy a Pixeldrain video (supports Range for seeking)",
-        "GET /api/hanime/pixeldrain/:id?download=1": "Force download of Pixeldrain video",
-        "GET /api/hanime/pixeldrain/:id/watermarked?name=<title>": "Download Pixeldrain video with 6stream watermark (ffmpeg)",
-      },
-    },
-    notes: [
-      "All /api/* routes require a whitelisted Origin/Referer header OR ?apipass=<key>.",
-      "Cached responses: home/all/latest/popular → 2 min; servers/source/player/stream → 5 min.",
-      "HLS segments are streamed directly (not cached). m3u8 playlists are cached for 1 min.",
-      "ffmpeg-static is required for /api/hls-download and /api/hanime/pixeldrain/:id/watermarked.",
-    ],
-  });
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  const ep = (path, desc) =>
+    `<div class="ep"><span class="get">GET</span><span class="ep-path">${path}</span><span class="ep-note">${desc}</span></div>`;
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>6stream — API Docs</title>
+<style>
+:root{--bg:#0f0f13;--bg2:#16161e;--bg3:#1e1e2a;--acc:#7c3aed;--acc2:#a855f7;--txt:#e2e8f0;--muted:#94a3b8;--bd:#2a2a3a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
+code{font-family:'Consolas','Courier New',monospace;}
+header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 24px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:9;}
+.logo{font-size:1.22rem;font-weight:900;color:var(--acc2);letter-spacing:.04em;}
+.logo span{color:var(--txt);}
+.pill{padding:2px 9px;border-radius:999px;background:rgba(124,58,237,.18);border:1px solid rgba(168,85,247,.38);color:var(--acc2);font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;}
+.by{margin-left:auto;font-size:.75rem;color:var(--muted);}
+.by strong{color:var(--txt);}
+main{max-width:880px;margin:0 auto;padding:28px 18px;}
+.hero{background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(168,85,247,.06));border:1px solid rgba(168,85,247,.28);border-radius:14px;padding:22px 24px;margin-bottom:22px;}
+.hero h1{font-size:1.45rem;font-weight:900;margin-bottom:5px;}
+.hero p{font-size:.85rem;color:var(--muted);line-height:1.6;}
+.auth-card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin-bottom:22px;}
+.card-hd{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:900;margin-bottom:9px;}
+.auth-key{background:rgba(124,58,237,.1);border:1px solid rgba(168,85,247,.25);border-radius:8px;padding:10px 13px;font-size:.81rem;color:#e2e8f0;font-family:monospace;word-break:break-all;margin-bottom:10px;}
+.origin-list{display:flex;flex-wrap:wrap;gap:6px;}
+.origin-tag{font-size:.67rem;padding:3px 9px;border-radius:5px;background:var(--bg3);border:1px solid var(--bd);color:var(--muted);}
+.info-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px;}
+.info-chip{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:12px 14px;}
+.ic-label{font-size:.59rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:900;margin-bottom:4px;}
+.ic-val{font-size:.82rem;color:var(--txt);font-weight:600;}
+.sec{margin-bottom:24px;}
+.sec-title{font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding-bottom:7px;border-bottom:1px solid var(--bd);margin-bottom:9px;}
+.ep{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;display:flex;align-items:center;gap:9px;padding:10px 14px;margin-bottom:6px;flex-wrap:wrap;}
+.get{font-size:.58rem;font-weight:900;padding:2px 7px;border-radius:4px;background:rgba(16,185,129,.18);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);font-family:monospace;letter-spacing:.04em;white-space:nowrap;flex-shrink:0;}
+.ep-path{font-size:.81rem;font-family:monospace;flex:1;color:var(--txt);min-width:0;}
+.ep-path .prm{color:#fbbf24;}
+.ep-path .qs{color:#7dd3fc;}
+.ep-note{font-size:.71rem;color:var(--muted);}
+.flow-card{background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.22);border-radius:10px;padding:14px 16px;margin-top:10px;}
+.flow-card .fhd{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:#6ee7b7;font-weight:900;margin-bottom:9px;}
+.flow-card ol{padding-left:18px;display:flex;flex-direction:column;gap:5px;}
+.flow-card li{font-size:.8rem;color:var(--muted);line-height:1.5;}
+.flow-card code{color:#e2e8f0;}
+.flow-card .hi{color:#6ee7b7;}
+footer{text-align:center;padding:22px;font-size:.72rem;color:var(--muted);border-top:1px solid var(--bd);margin-top:8px;}
+footer strong{color:var(--txt);}
+@media(max-width:640px){.info-row{grid-template-columns:1fr 1fr;}.ep-note{width:100%;}}
+@media(max-width:400px){.info-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">6<span>stream</span></div>
+  <span class="pill">API v1</span>
+  <div class="by">by <strong>Jhames Martin</strong></div>
+</header>
+<main>
+  <div class="hero">
+    <h1>6stream API Documentation</h1>
+    <p>Full anime &amp; 18+ scraper API. All routes return JSON. Built by <strong style="color:var(--txt)">Jhames Martin</strong> &mdash; sources: <code>anisuge.se</code> (anime) &amp; <code>hanime.tv</code> (18+).</p>
+  </div>
+
+  <div class="auth-card">
+    <div class="card-hd">Cross-Domain Auth</div>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;">Requests from <strong style="color:var(--txt)">unlisted domains</strong> must include <code style="color:#fbbf24">?apipass=&lt;key&gt;</code> on every call.</p>
+    <div class="auth-key">GET /api/home?apipass=jrmphpogi ko13aila</div>
+    <div class="card-hd" style="margin-top:12px;">Whitelisted Origins (no key needed)</div>
+    <div class="origin-list">
+      <span class="origin-tag">6stream.vercel.app</span>
+      <span class="origin-tag">sixstream.onrender.com</span>
+      <span class="origin-tag">6stream.onrender.com</span>
+      <span class="origin-tag">localhost:3000</span>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-chip"><div class="ic-label">Anime Source</div><div class="ic-val">anisuge.se</div></div>
+    <div class="info-chip"><div class="ic-label">18+ Source</div><div class="ic-val">hanime.tv</div></div>
+    <div class="info-chip"><div class="ic-label">Cache TTL</div><div class="ic-val">2 – 5 min</div></div>
+    <div class="info-chip"><div class="ic-label">HLS Segments</div><div class="ic-val">Streamed live</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">General</div>
+    ${ep("/api","Short endpoint list")}
+    ${ep("/api/all","Home + latest + popular (cached 2 min)")}
+    ${ep("/api/home","Featured &amp; recent anime")}
+    ${ep('/api/latest<span class="qs">?page=1</span>',"Latest updated anime")}
+    ${ep('/api/popular<span class="qs">?page=1</span>',"Most viewed anime")}
+    ${ep('/api/search<span class="qs">?q=query</span>',"Search anime by title")}
+    ${ep("/api/genres","All genres")}
+    ${ep('/api/genre/<span class="prm">:genreId</span><span class="qs">?page=1</span>',"Anime by genre")}
+    ${ep('/api/type/<span class="prm">:type</span><span class="qs">?page=1</span>',"tv | movie | ova | ona | special | music")}
+    ${ep('/api/status/<span class="prm">:status</span><span class="qs">?page=1</span>',"currently-airing | finished-airing | not-yet-aired")}
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Anime Detail &amp; Episodes</div>
+    ${ep('/api/anime/<span class="prm">:slug</span>',"Anime info + numericId")}
+    ${ep('/api/anime/<span class="prm">:slug</span>/episodes',"Episode list (serverKey per episode)")}
+    ${ep('/api/servers<span class="qs">?key=serverKey</span>',"Server list for episode (linkId per server)")}
+    ${ep('/api/source/<span class="prm">:linkId</span>',"Embed URL for a server (cached 5 min)")}
+    ${ep('/api/sources/<span class="prm">:slug/:epNum</span>',"All servers + embed URLs in one call")}
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Stream Pipeline (no browser needed)</div>
+    ${ep('/api/stream/<span class="prm">:linkId</span>',"Embed URL + m3u8 + subtitles")}
+    ${ep('/api/player<span class="qs">?url=embedUrl</span>',"Real m3u8 + subtitles from embed URL")}
+    ${ep('/api/play/<span class="prm">:slug/:epNum</span><span class="qs">?type=sub&amp;server=0</span>',"Full pipeline in one call")}
+    <div class="flow-card">
+      <div class="fhd">Flow Guide</div>
+      <ol>
+        <li><code>GET /api/anime/:slug</code> &rarr; get <code>numericId</code></li>
+        <li><code>GET /api/anime/:slug/episodes</code> &rarr; get episode list &rarr; each has <code>serverKey</code></li>
+        <li><code>GET /api/servers?key={serverKey}</code> &rarr; get servers &rarr; each has <code>linkId</code></li>
+        <li><code>GET /api/source/:linkId</code> &rarr; get embed URL</li>
+        <li><code>GET /api/player?url={embedUrl}</code> &rarr; get m3u8 + subtitles</li>
+        <li class="hi">OR &mdash; <code>GET /api/play/:slug/:epNum</code> does steps 1&ndash;5 in one call</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Proxy &amp; Utility</div>
+    ${ep('/api/proxy<span class="qs">?url=pageUrl</span>',"Embed page with ad-blocker injected")}
+    ${ep('/api/hls<span class="qs">?url=m3u8Url</span>',"HLS proxy — rewrites all segment URLs")}
+    ${ep('/api/hls<span class="qs">?url=...&amp;download=1&amp;name=title</span>',"Download m3u8 playlist file")}
+    ${ep('/api/hls-download<span class="qs">?url=m3u8&amp;name=title</span>',"Full HLS as downloadable MP4 (ffmpeg)")}
+    ${ep('/api/img-proxy<span class="qs">?url=imageUrl</span>',"Image proxy for hanime CDN")}
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Hanime.tv (18+)</div>
+    ${ep("/api/hanime","Hanime endpoint list")}
+    ${ep('/api/hanime/trending<span class="qs">?page=0&amp;per_page=24</span>',"Trending videos")}
+    ${ep('/api/hanime/new<span class="qs">?page=0&amp;ordering=created_at_unix</span>',"Newest videos")}
+    ${ep('/api/hanime/browse<span class="qs">?tags=...&amp;brands=...&amp;ordering=...</span>',"Browse with filters")}
+    ${ep('/api/hanime/search<span class="qs">?q=query&amp;tags=...&amp;brands=...</span>',"Search videos")}
+    ${ep("/api/hanime/tags","All tags")}
+    ${ep("/api/hanime/brands","All brands / studios")}
+    ${ep('/api/hanime/meta/<span class="prm">:slug</span>',"Fast metadata from search index")}
+    ${ep('/api/hanime/video/<span class="prm">:slug</span>',"Video detail + clean CDN stream URLs")}
+    ${ep('/api/hanime/pixeldrain/<span class="prm">:id</span>',"Proxy Pixeldrain video (Range supported)")}
+    ${ep('/api/hanime/pixeldrain/<span class="prm">:id</span><span class="qs">?download=1</span>',"Force-download Pixeldrain video")}
+    ${ep('/api/hanime/pixeldrain/<span class="prm">:id</span>/watermarked<span class="qs">?name=title</span>',"Download with 6stream watermark (ffmpeg)")}
+  </div>
+</main>
+<footer>
+  <strong>6stream API</strong> &mdash; Built by <strong>Jhames Martin</strong> &nbsp;&middot;&nbsp; Data scraped from public sources
+</footer>
+</body>
+</html>`);
 });
 
 // ── Error handlers ────────────────────────────────────────────────────────────
