@@ -640,68 +640,67 @@ app.get("/api/hls-download", wrap(async (req, res) => {
     return res.status(404).json({ success: false, message: "No segments found in playlist." });
   }
 
-  // Platform-aware font path
-  const wmFont = process.platform === "win32"
-    ? "C\\:/Windows/Fonts/arialbd.ttf"
-    : "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+  // Watermark — no fontfile, uses fontconfig/system font (works on Render/Ubuntu)
+  const wmFilter = `drawtext=text='6stream':x=w-tw-18:y=18:fontsize=max(20\\,h*0.045):fontcolor=white@0.60:shadowcolor=black@0.82:shadowx=2:shadowy=2`;
 
-  // Watermark drawn on main video (top-right corner)
-  const wmFilter = `drawtext=fontfile='${wmFont}':text='6stream':x=w-tw-18:y=18:fontsize=max(20\\,h*0.045):fontcolor=white@0.60:shadowcolor=black@0.82:shadowx=2:shadowy=2`;
-
-  // Intro clip — 2.5s black screen with 6stream branding + fill bar
+  // Intro — 2.5s branded clip, no fontfile dependency
   const introChain = [
     `fade=t=in:st=0:d=0.4`,
     `drawbox=x=240:y=500:w=800:h=8:color=white@0.12:thickness=fill`,
-    `drawbox=x=242:y=502:w=796:h=4:color=0xa855f7@0.9:thickness=fill`,
-    `drawtext=fontfile='${wmFont}':text='6stream':fontsize=90:fontcolor=white:x=(w-tw)/2:y=(h/2-80):shadowcolor=black@0.55:shadowx=3:shadowy=3`,
-    `drawtext=fontfile='${wmFont}':text='by jhames martin':fontsize=28:fontcolor=white@0.55:x=(w-tw)/2:y=(h/2+18)`,
+    `drawbox=x=242:y=502:w=796:h=4:color=0xa855f7:thickness=fill`,
+    `drawtext=text='6stream':fontsize=90:fontcolor=white:x=(w-tw)/2:y=(h/2-80):shadowcolor=black@0.55:shadowx=3:shadowy=3`,
+    `drawtext=text='by jhames martin':fontsize=28:fontcolor=white@0.55:x=(w-tw)/2:y=(h/2+18)`,
   ].join(",");
 
-  // filter_complex:
-  //   [0:v] = lavfi intro → add text/bar chain → [intro_v]
-  //   [1:v] = main video  → scale to 720p, fps=24, watermark → [main_v]
-  //   concat → [out_v]
-  //   [1:a] → delay 2500ms to sync with intro → [out_a]
   const filterComplex =
     `[0:v]${introChain}[intro_v];` +
     `[1:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=24,${wmFilter}[main_v];` +
     `[intro_v][main_v]concat=n=2:v=1:a=0[out_v];` +
     `[1:a]aformat=channel_layouts=stereo:sample_rates=44100,adelay=2500|2500[out_a]`;
 
-  // Spawn ffmpeg:
-  //   input 0 = lavfi color source (2.5s intro)
-  //   input 1 = main TS stream from stdin (video segments)
   const ff = spawn(ffmpegPath, [
     "-hide_banner", "-loglevel", "error",
     "-f", "lavfi", "-i", "color=c=#0f0f13:s=1280x720:r=24:d=2.5",
     "-f", "mpegts", "-i", "pipe:0",
     "-filter_complex", filterComplex,
-    "-map", "[out_v]",
-    "-map", "[out_a]",
-    "-c:v", "libx264",
-    "-preset", "veryfast",
-    "-crf", "23",
+    "-map", "[out_v]", "-map", "[out_a]",
+    "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
     "-c:a", "aac",
     "-movflags", "frag_keyframe+empty_moov",
     "-f", "mp4", "pipe:1",
   ], { windowsHide: true });
 
-  ff.stdin.on("error", () => {}); // suppress EPIPE when ffmpeg exits early
+  ff.stdin.on("error", () => {});
 
-  res.setHeader("Content-Type", "video/mp4");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  res.setHeader("Cache-Control", "no-store");
-  ff.stdout.pipe(res);
+  // ── Fix 0-byte issue ──────────────────────────────────────────────────────
+  // Do NOT pipe stdout to res directly: pipe calls res.end() when ffmpeg exits
+  // (even on error), giving the browser a clean 0-byte file with no error.
+  // Instead, send headers only after the first real data chunk arrives.
+  let started = false;
+  ff.stdout.on("data", (chunk) => {
+    if (!started) {
+      started = true;
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Cache-Control", "no-store");
+    }
+    res.write(chunk);
+  });
+  ff.stdout.on("end", () => { if (started && !res.writableEnded) res.end(); });
 
   let errText = "";
   ff.stderr.on("data", c => { errText += c.toString(); });
-  ff.on("error", err => {
-    if (!res.headersSent) res.status(500).json({ success: false, message: err.message });
-    else res.destroy(err);
+  ff.on("error", (err) => {
+    if (!started) res.status(500).json({ success: false, message: err.message });
+    else if (!res.writableEnded) res.end();
   });
-  ff.on("close", code => {
-    if (code && !res.headersSent)
-      res.status(500).json({ success: false, message: errText || `ffmpeg exited ${code}` });
+  ff.on("close", (code) => {
+    if (!started) {
+      // ffmpeg produced nothing — send the actual error so user sees it
+      res.status(500).json({ success: false, message: errText.slice(-800) || `ffmpeg exited ${code}` });
+    } else if (!res.writableEnded) {
+      res.end();
+    }
   });
   req.on("close", () => { if (!ff.killed) ff.kill("SIGKILL"); });
 
