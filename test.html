@@ -1903,6 +1903,48 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
   });
   // ──────────────────────────────────────────────────────────────────────
 
+  // ── Keyboard controls ─────────────────────────────────────────────────
+  if(_keyHandler) document.removeEventListener('keydown', _keyHandler);
+  _keyHandler=(e)=>{
+    if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
+    if(!document.getElementById('player')){ document.removeEventListener('keydown',_keyHandler); return; }
+    switch(e.key){
+      case ' ':
+        e.preventDefault();
+        togglePlayback();
+        showControls();
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        v.currentTime=Math.max(0, v.currentTime-(e.repeat?3:SEEK_SEC));
+        if(!e.repeat) showSeekFlash(true);
+        showControls();
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        v.currentTime=Math.min(v.duration||0, v.currentTime+(e.repeat?3:SEEK_SEC));
+        if(!e.repeat) showSeekFlash(false);
+        showControls();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        v.volume=Math.min(1, Math.round((v.volume+0.1)*10)/10);
+        v.muted=false;
+        volume.value=v.volume;
+        sync(); showControls();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        v.volume=Math.max(0, Math.round((v.volume-0.1)*10)/10);
+        v.muted=v.volume===0;
+        volume.value=v.volume;
+        sync(); showControls();
+        break;
+    }
+  };
+  document.addEventListener('keydown', _keyHandler);
+  // ──────────────────────────────────────────────────────────────────────
+
   muteBtn.onclick=()=>{ v.muted=!v.muted; sync(); };
   volume.oninput=()=>{ v.volume=parseFloat(volume.value); v.muted=v.volume===0; sync(); };
   speed.onchange=()=>{ v.playbackRate=parseFloat(speed.value)||1; };
@@ -2091,6 +2133,7 @@ function playWhoosh(){
 
 // ── Auto-next episode ─────────────────────────────────────────────────────────
 let _autoNextTimer = null;
+let _keyHandler = null;
 
 function showAutoNext(nextIdx) {
   const wrap = document.getElementById('player');
