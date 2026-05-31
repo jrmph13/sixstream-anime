@@ -649,8 +649,8 @@ app.get("/api/hls-download", wrap(async (req, res) => {
     "-map", "0:v:0?",
     "-map", "0:a:0?",
     "-c:v", "copy",
-    "-c:a", "copy",
-    "-bsf:a", "aac_adtstoasc",
+    "-c:a", "aac",     // re-encode audio — avoids aac_adtstoasc silent drop
+    "-b:a", "128k",
     "-movflags", "frag_keyframe+empty_moov",
     "-f", "mp4", "pipe:1",
   ], { windowsHide: true });
