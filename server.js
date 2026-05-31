@@ -646,6 +646,8 @@ app.get("/api/hls-download", wrap(async (req, res) => {
   const ff = spawn(ffmpegPath, [
     "-hide_banner", "-loglevel", "error",
     "-f", "mpegts", "-i", "pipe:0",
+    "-map", "0:v:0?",
+    "-map", "0:a:0?",
     "-c:v", "copy",
     "-c:a", "copy",
     "-bsf:a", "aac_adtstoasc",
