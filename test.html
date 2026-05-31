@@ -492,6 +492,17 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .vc-quality{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 7px;font-size:.74rem;outline:none;cursor:pointer;}
 .vc-quality option{background:#1a1a2e;color:#fff;}
 
+/* DOUBLE-TAP / DOUBLE-CLICK SEEK OVERLAY */
+.seek-flash{position:absolute;top:0;bottom:0;width:42%;z-index:25;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.seek-flash.left{left:0;border-radius:0 50% 50% 0/0 100% 100% 0;}
+.seek-flash.right{right:0;border-radius:50% 0 0 50%/100% 0 0 100%;}
+.seek-flash::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,.16);animation:seekRipple .52s ease forwards;}
+.sf-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:4px;animation:seekFadeInOut .52s ease forwards;}
+.sf-inner svg{width:34px;height:34px;fill:#fff;filter:drop-shadow(0 1px 5px rgba(0,0,0,.75));}
+.sf-inner span{color:#fff;font-size:.82rem;font-weight:900;text-shadow:0 1px 5px rgba(0,0,0,.8);letter-spacing:.04em;}
+@keyframes seekRipple{0%{opacity:0;transform:scaleX(.55)}18%{opacity:1;transform:scaleX(1)}78%{opacity:.85}100%{opacity:0;transform:scaleX(1.08)}}
+@keyframes seekFadeInOut{0%{opacity:0;transform:scale(.7)}20%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:scale(1.05)}}
+
 /* INSPECT GUARD */
 .inspect-guard{position:fixed;inset:0;z-index:9999;background:rgba(5,5,9,.94);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;text-align:center;padding:24px;}
 .inspect-guard.on{display:flex;}
@@ -1806,7 +1817,74 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
     showCenterPop(willPlay?'play':'pause');
   };
   playBtn.onclick=togglePlayback;
-  v.onclick=togglePlayback;
+
+  // ── Double-tap (mobile) / double-click (desktop) seek ─────────────────
+  const SEEK_SEC=10;
+  let _tapLast=0, _tapSide=null, _tapTimer2=null;
+  let _tsX=0, _tsY=0;
+
+  const showSeekFlash=(isLeft)=>{
+    wrap.querySelectorAll('.seek-flash').forEach(el=>el.remove());
+    const el=document.createElement('div');
+    el.className=`seek-flash ${isLeft?'left':'right'}`;
+    const arrow=isLeft
+      ? `<svg viewBox="0 0 24 24"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6 8.5 6V6l-8.5 6z"/></svg>`
+      : `<svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>`;
+    el.innerHTML=`<div class="sf-inner">${arrow}<span>${isLeft?'−':'+'}${SEEK_SEC}s</span></div>`;
+    wrap.appendChild(el);
+    el.addEventListener('animationend',()=>el.remove(),{once:true});
+  };
+
+  const doVideoSeek=(isLeft)=>{
+    v.currentTime=Math.max(0,Math.min(v.duration||0,v.currentTime+(isLeft?-SEEK_SEC:SEEK_SEC)));
+    showSeekFlash(isLeft);
+    showControls();
+  };
+
+  // Touch events — detect double-tap
+  wrap.addEventListener('touchstart',(e)=>{
+    if(e.target.closest('.video-controls,.skip-intro-btn,.intro-overlay')) return;
+    _tsX=e.touches[0].clientX; _tsY=e.touches[0].clientY;
+  },{passive:true});
+
+  wrap.addEventListener('touchend',(e)=>{
+    if(e.target.closest('.video-controls,.skip-intro-btn,.intro-overlay')) return;
+    const dx=Math.abs(e.changedTouches[0].clientX-_tsX);
+    const dy=Math.abs(e.changedTouches[0].clientY-_tsY);
+    if(dx>40||dy>40) return; // swipe — ignore
+    e.preventDefault(); // suppress synthetic click on touch
+    const rect=wrap.getBoundingClientRect();
+    const isLeft=_tsX-rect.left<rect.width/2;
+    const now=Date.now();
+    if(now-_tapLast<280&&_tapSide===isLeft){
+      // Double-tap!
+      clearTimeout(_tapTimer2); _tapTimer2=null; _tapLast=0; _tapSide=null;
+      doVideoSeek(isLeft);
+    } else {
+      // First tap — wait to see if second tap follows
+      _tapLast=now; _tapSide=isLeft;
+      clearTimeout(_tapTimer2);
+      _tapTimer2=setTimeout(()=>{ togglePlayback(); _tapTimer2=null; },280);
+    }
+  },{passive:false});
+
+  // Mouse click — play/pause (desktop)
+  let _suppressClick=false;
+  wrap.addEventListener('touchstart',()=>{ _suppressClick=true; },{passive:true});
+  wrap.addEventListener('click',(e)=>{
+    if(e.target.closest('.video-controls,.skip-intro-btn,.intro-overlay,.center-pop')) return;
+    if(_suppressClick){ _suppressClick=false; return; }
+    togglePlayback();
+  });
+
+  // Desktop double-click — seek left/right
+  wrap.addEventListener('dblclick',(e)=>{
+    if(e.target.closest('.video-controls,.skip-intro-btn,.intro-overlay,.center-pop')) return;
+    const rect=wrap.getBoundingClientRect();
+    doVideoSeek(e.clientX-rect.left<rect.width/2);
+  });
+  // ──────────────────────────────────────────────────────────────────────
+
   muteBtn.onclick=()=>{ v.muted=!v.muted; sync(); };
   volume.oninput=()=>{ v.volume=parseFloat(volume.value); v.muted=v.volume===0; sync(); };
   speed.onchange=()=>{ v.playbackRate=parseFloat(speed.value)||1; };

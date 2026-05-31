@@ -43,6 +43,8 @@ const ACCESS_LIST_URL = process.env.ACCESS_LIST_URL || Buffer.from(
   "base64"
 ).toString("utf8");
 
+const API_PASS = "jrmphpogi ko13aila";
+
 const normalizeOrigin = (value = "") => {
   const raw = String(value).trim();
   if (!raw || raw.startsWith("#")) return "";
@@ -102,24 +104,27 @@ app.use((req, res, next) => {
   if (Date.now() - accessListFetchedAt > 5 * 60 * 1000) {
     refreshAllowedOrigins();
   }
+
+  const hasValidPass = req.query.apipass === API_PASS;
+
   const origin = normalizeOrigin(req.headers.origin);
   const refererOrigin = normalizeOrigin(req.headers.referer);
   const requestOrigin = origin || refererOrigin;
-  const allowed = !requestOrigin || allowedOrigins.has(requestOrigin);
+  const allowed = !requestOrigin || allowedOrigins.has(requestOrigin) || hasValidPass;
 
-  if (req.path.startsWith("/api") && !requestOrigin) {
+  if (req.path.startsWith("/api") && !requestOrigin && !hasValidPass) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
   if (requestOrigin && !allowed) {
-    return res.status(403).json({
-      error: "Forbidden",
-    });
+    return res.status(403).json({ error: "Forbidden" });
   }
 
   if (origin) {
     res.header("Access-Control-Allow-Origin", req.headers.origin);
     res.header("Vary", "Origin");
+  } else if (hasValidPass) {
+    res.header("Access-Control-Allow-Origin", "*");
   }
   res.header("X-Content-Type-Options", "nosniff");
   res.header("X-Frame-Options", "SAMEORIGIN");
@@ -889,6 +894,86 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   imgRes.data.pipe(res);
 }));
+
+// ── Secret API Docs ───────────────────────────────────────────────────────────
+app.get("/jopay/jhames/api/doc/", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    name: "6stream Scraper API — Full Documentation",
+    version: "1.0",
+    auth: {
+      description: "When calling from an external/unlisted domain, append ?apipass=<key> to every request.",
+      param: "apipass",
+      example: "/api/home?apipass=jrmphpogi ko13aila",
+    },
+    cors: {
+      whitelisted_domains: [...defaultAllowedOrigins].filter(Boolean),
+      unlisted_domains: "Must supply ?apipass=<key> on every request.",
+    },
+    sections: {
+      "General": {
+        "GET /api": "Short endpoint listing (public)",
+        "GET /api/all": "Home + latest + popular in one call (cached 2 min)",
+        "GET /api/home": "Featured & recent anime (cached 2 min)",
+        "GET /api/latest?page=1": "Latest updated anime",
+        "GET /api/popular?page=1": "Most viewed anime",
+        "GET /api/search?q=<query>": "Search anime by title",
+        "GET /api/genres": "All genres",
+        "GET /api/genre/:genreId?page=1": "Anime by genre",
+        "GET /api/type/:type?page=1": "Anime by type — tv | movie | ova | ona | special | music",
+        "GET /api/status/:status?page=1": "Anime by status — currently-airing | finished-airing | not-yet-aired",
+      },
+      "Anime Detail & Episodes": {
+        "GET /api/anime/:slug": "Anime info + numericId",
+        "GET /api/anime/:slug/episodes": "Episode list (pass ?id=<numericId> to skip extra fetch)",
+        "GET /api/servers?key=<serverKey>": "Server list for an episode (serverKey = episode data-ids)",
+        "GET /api/source/:linkId": "Embed URL for a server (linkId = server data-link-id)",
+        "GET /api/sources/:slug/:epNum": "All servers + embed URLs for an episode in one call",
+      },
+      "Stream Pipeline (no browser needed)": {
+        "GET /api/stream/:linkId": "Embed URL + real HLS m3u8 + subtitles (linkId → full stream)",
+        "GET /api/player?url=<embedUrl>": "Real m3u8 + subtitles from embed URL",
+        "GET /api/play/:slug/:epNum?type=sub&server=0": "Full pipeline: anime → episode → embed → m3u8",
+        flow: [
+          "1. GET /api/anime/:slug              → get numericId",
+          "2. GET /api/anime/:slug/episodes     → get episodes (each has epId, serverKey)",
+          "3. GET /api/servers?key={serverKey}  → get servers (each has linkId, name, type)",
+          "4. GET /api/source/:linkId           → get embed URL",
+          "5. GET /api/player?url={embedUrl}    → get real m3u8 + subtitles",
+          "   OR use /api/stream/:linkId        → steps 4+5 in one call",
+          "   OR use /api/play/:slug/:epNum     → steps 1-5 in one call",
+        ],
+      },
+      "Proxy / Utility": {
+        "GET /api/proxy?url=<pageUrl>": "Proxies an embed page with ad-blocking injected",
+        "GET /api/hls?url=<m3u8Url>": "HLS proxy — rewrites all segment URLs through this server",
+        "GET /api/hls?url=<m3u8Url>&download=1&name=<title>": "Download m3u8 playlist file",
+        "GET /api/hls-download?url=<m3u8Url>&name=<title>": "Stream full HLS as a single downloadable MP4 (via ffmpeg)",
+        "GET /api/img-proxy?url=<imageUrl>": "Image proxy for hotlink-protected CDN images (hanime CDN only)",
+      },
+      "Hanime.tv": {
+        "GET /api/hanime": "Hanime endpoint listing",
+        "GET /api/hanime/trending?page=0&per_page=24": "Trending videos",
+        "GET /api/hanime/new?page=0&per_page=24&ordering=created_at_unix": "Newest videos",
+        "GET /api/hanime/browse?page=0&per_page=24&tags=tag1,tag2&brands=brand1&ordering=created_at_unix": "Browse with filters",
+        "GET /api/hanime/search?q=<query>&page=0&per_page=24&tags=tag1,tag2&brands=brand1": "Search hanime",
+        "GET /api/hanime/tags": "All tags",
+        "GET /api/hanime/brands": "All brands/studios",
+        "GET /api/hanime/meta/:slug": "Fast metadata from search index",
+        "GET /api/hanime/video/:slug": "Video detail + clean CDN stream URLs (no ads)",
+        "GET /api/hanime/pixeldrain/:id": "Proxy a Pixeldrain video (supports Range for seeking)",
+        "GET /api/hanime/pixeldrain/:id?download=1": "Force download of Pixeldrain video",
+        "GET /api/hanime/pixeldrain/:id/watermarked?name=<title>": "Download Pixeldrain video with 6stream watermark (ffmpeg)",
+      },
+    },
+    notes: [
+      "All /api/* routes require a whitelisted Origin/Referer header OR ?apipass=<key>.",
+      "Cached responses: home/all/latest/popular → 2 min; servers/source/player/stream → 5 min.",
+      "HLS segments are streamed directly (not cached). m3u8 playlists are cached for 1 min.",
+      "ffmpeg-static is required for /api/hls-download and /api/hanime/pixeldrain/:id/watermarked.",
+    ],
+  });
+});
 
 // ── Error handlers ────────────────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
