@@ -584,14 +584,15 @@ app.get("/api/hls", wrap(async (req, res) => {
 }));
 
 // GET /api/hls-download?url=<m3u8>&name=<filename>
-// Streams the selected HLS source as one downloadable MP4.
+// Server fetches every HLS segment via axios (correct Referer), pipes to ffmpeg stdin → MP4.
+// This avoids ffmpeg making direct CDN requests which often fail due to missing auth headers.
 app.get("/api/hls-download", wrap(async (req, res) => {
   const url = req.query.url;
   if (!url || !String(url).startsWith("http")) {
     return res.status(400).json({ success: false, message: "url required" });
   }
   if (!ffmpegPath) {
-    return res.status(500).json({ success: false, message: "ffmpeg-static is not available." });
+    return res.status(500).json({ success: false, message: "ffmpeg-static not available" });
   }
 
   const cleanName = String(req.query.name || "video")
@@ -602,41 +603,93 @@ app.get("/api/hls-download", wrap(async (req, res) => {
     .slice(0, 120) || "video";
   const filename = `6Stream-jhamesmartin-${cleanName}.mp4`;
   const referer = refererFor(url);
-  const origin = referer.endsWith("/") ? referer.slice(0, -1) : referer;
+  const hdrs = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Referer": referer,
+    "Origin": referer.replace(/\/$/, ""),
+    "Accept": "*/*",
+  };
+
+  // Fetch m3u8, resolve master → variant if needed, collect segment URLs
+  let segments;
+  try {
+    const r = await axios.get(url, { responseType: "text", timeout: 15000, headers: hdrs });
+    const body = String(r.data);
+    const base = url.substring(0, url.lastIndexOf("/") + 1);
+    let lines = body.split(/\r?\n/);
+
+    if (body.includes("EXT-X-STREAM-INF")) {
+      // Master playlist — pick first (highest) variant
+      const varLine = lines.find(l => l.trim() && !l.startsWith("#"));
+      if (!varLine) throw new Error("No variant stream in master playlist");
+      const varUrl = varLine.trim().startsWith("http") ? varLine.trim() : base + varLine.trim();
+      const vBase = varUrl.substring(0, varUrl.lastIndexOf("/") + 1);
+      const vr = await axios.get(varUrl, { responseType: "text", timeout: 15000, headers: hdrs });
+      lines = String(vr.data).split(/\r?\n/);
+      segments = lines.filter(l => l.trim() && !l.startsWith("#"))
+        .map(l => l.trim().startsWith("http") ? l.trim() : vBase + l.trim());
+    } else {
+      segments = lines.filter(l => l.trim() && !l.startsWith("#"))
+        .map(l => l.trim().startsWith("http") ? l.trim() : base + l.trim());
+    }
+  } catch (e) {
+    return res.status(502).json({ success: false, message: `Playlist fetch failed: ${e.message}` });
+  }
+
+  if (!segments.length) {
+    return res.status(404).json({ success: false, message: "No segments found in playlist." });
+  }
+
+  // Spawn ffmpeg — reads concatenated TS from stdin, writes fragmented MP4 to stdout
+  const ff = spawn(ffmpegPath, [
+    "-hide_banner", "-loglevel", "error",
+    "-f", "mpegts", "-i", "pipe:0",
+    "-map", "0:v:0?", "-map", "0:a:0?",
+    "-c", "copy",
+    "-bsf:a", "aac_adtstoasc",
+    "-movflags", "frag_keyframe+empty_moov",
+    "-f", "mp4", "pipe:1",
+  ], { windowsHide: true });
+
+  ff.stdin.on("error", () => {}); // suppress EPIPE when ffmpeg exits early
 
   res.setHeader("Content-Type", "video/mp4");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.setHeader("Cache-Control", "no-store");
-
-  const ff = spawn(ffmpegPath, [
-    "-hide_banner",
-    "-loglevel", "error",
-    "-headers", `User-Agent: Mozilla/5.0\r\nReferer: ${referer}\r\nOrigin: ${origin}\r\nAccept: */*\r\n`,
-    "-i", String(url),
-    "-map", "0:v:0?",
-    "-map", "0:a:0?",
-    "-c", "copy",
-    "-bsf:a", "aac_adtstoasc",
-    "-movflags", "frag_keyframe+empty_moov",
-    "-f", "mp4",
-    "pipe:1",
-  ], { windowsHide: true });
-
   ff.stdout.pipe(res);
+
   let errText = "";
-  ff.stderr.on("data", chunk => { errText += chunk.toString(); });
+  ff.stderr.on("data", c => { errText += c.toString(); });
   ff.on("error", err => {
     if (!res.headersSent) res.status(500).json({ success: false, message: err.message });
     else res.destroy(err);
   });
   ff.on("close", code => {
-    if (code && !res.headersSent) {
-      res.status(500).json({ success: false, message: errText || `ffmpeg exited with ${code}` });
+    if (code && !res.headersSent)
+      res.status(500).json({ success: false, message: errText || `ffmpeg exited ${code}` });
+  });
+  req.on("close", () => { if (!ff.killed) ff.kill("SIGKILL"); });
+
+  // Stream each TS segment to ffmpeg stdin sequentially
+  (async () => {
+    try {
+      for (const seg of segments) {
+        if (ff.killed) break;
+        const r = await axios.get(seg, {
+          responseType: "stream", timeout: 30000, headers: hdrs,
+          validateStatus: s => s < 400,
+        });
+        await new Promise((resolve, reject) => {
+          r.data.on("end", resolve);
+          r.data.on("error", reject);
+          r.data.pipe(ff.stdin, { end: false });
+        });
+      }
+    } catch (e) {
+      console.error("[hls-dl] segment error:", e.message);
     }
-  });
-  req.on("close", () => {
-    if (!ff.killed) ff.kill("SIGKILL");
-  });
+    try { ff.stdin.end(); } catch (_) {}
+  })();
 }));
 
 // GET /api/player?url=<embedUrl>  →  real m3u8 + subtitles from getSources API

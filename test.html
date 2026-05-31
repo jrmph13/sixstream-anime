@@ -521,16 +521,42 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 @keyframes seekRipple{0%{opacity:0;transform:scaleX(.55)}18%{opacity:1;transform:scaleX(1)}78%{opacity:.85}100%{opacity:0;transform:scaleX(1.08)}}
 @keyframes seekFadeInOut{0%{opacity:0;transform:scale(.7)}20%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:scale(1.05)}}
 
-/* MOBILE SEARCH BAR */
+/* MOBILE SEARCH BAR — display:none must be outside media query */
 .mob-srch-btn{display:none;}
+#mob-srch-bar{
+  display:none;position:fixed;top:56px;left:0;right:0;z-index:199;
+  background:var(--bg2);border-bottom:2px solid var(--accent);
+  padding:10px 14px;gap:8px;align-items:center;
+  box-shadow:0 6px 24px rgba(0,0,0,.28);
+}
+#mob-srch-bar.open{display:flex;}
+#mob-srch-input{
+  flex:1;min-width:0;
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);padding:9px 14px;border-radius:8px;
+  font-size:.9rem;font-family:inherit;outline:none;
+  -webkit-appearance:none;appearance:none;transition:border .2s;
+}
+#mob-srch-input:focus{border-color:var(--accent);}
+#mob-srch-input::-webkit-search-decoration,
+#mob-srch-input::-webkit-search-cancel-button{-webkit-appearance:none;}
+.mob-srch-go{
+  background:var(--accent);border:none;color:#fff;
+  border-radius:8px;padding:0 20px;height:38px;
+  font-weight:700;font-size:.85rem;cursor:pointer;
+  flex-shrink:0;font-family:inherit;transition:filter .18s;white-space:nowrap;
+}
+.mob-srch-go:hover{filter:brightness(1.12);}
+.mob-srch-close{
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--muted);border-radius:8px;width:38px;height:38px;
+  cursor:pointer;flex-shrink:0;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;transition:all .18s;
+}
+.mob-srch-close:hover{border-color:var(--accent);color:var(--text);}
 @media(max-width:760px){
   .mob-srch-btn{display:flex;margin-left:auto;}
-  #mob-srch-bar{display:none;position:fixed;top:54px;left:0;right:0;z-index:199;background:var(--bg2);border-bottom:2px solid var(--accent);padding:8px 12px;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.3);}
-  #mob-srch-bar.open{display:flex;}
-  #mob-srch-input{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:.93rem;outline:none;}
-  #mob-srch-input:focus{border-color:var(--accent);}
-  .mob-srch-go{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:0 18px;height:38px;font-weight:700;font-size:.85rem;cursor:pointer;flex-shrink:0;}
-  .mob-srch-close{background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:8px;width:38px;height:38px;cursor:pointer;flex-shrink:0;font-size:1rem;display:flex;align-items:center;justify-content:center;}
+  #mob-srch-bar{top:54px;}
 }
 
 /* INSPECT GUARD */
@@ -587,7 +613,7 @@ body.theme-light .inspect-card b{color:#0f172a;}
 </nav>
 
 <div id="mob-srch-bar">
-  <input id="mob-srch-input" type="search" placeholder="Search anime..." autocomplete="off" inputmode="search"/>
+  <input id="mob-srch-input" type="text" placeholder="Search anime..." autocomplete="off" inputmode="search"/>
   <button class="mob-srch-go" onclick="doMobSearch()">Search</button>
   <button class="mob-srch-close" onclick="toggleMobSearch()">✕</button>
 </div>
