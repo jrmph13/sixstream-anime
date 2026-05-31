@@ -618,15 +618,7 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .t10-title{font-size:.84rem;font-weight:700;line-height:1.3;margin-bottom:4px;}
 .t10-meta{font-size:.72rem;color:var(--muted);}
 
-/* INSPECT GUARD */
-.inspect-guard{position:fixed;inset:0;z-index:9999;background:rgba(5,5,9,.94);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;text-align:center;padding:24px;}
-.inspect-guard.on{display:flex;}
-.inspect-card{max-width:420px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;box-shadow:0 26px 80px rgba(0,0,0,.5);}
-.inspect-card b{display:block;font-size:1.1rem;margin-bottom:8px;color:#fff;}
-.inspect-card span{display:block;color:var(--muted);font-size:.86rem;line-height:1.5;}
-.inspect-card small{display:block;margin-top:12px;color:var(--accent2);font-weight:800;text-transform:uppercase;letter-spacing:.08em;}
-.inspect-card button{margin-top:16px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:900;padding:9px 18px;cursor:pointer;}
-body.theme-light .inspect-card b{color:#0f172a;}
+
 </style>
 </head>
 <body>
@@ -812,14 +804,18 @@ body.theme-light .inspect-card b{color:#0f172a;}
 <script>
 const API_ORIGIN = window.location.origin.replace(/\/$/, '');
 const API = `${API_ORIGIN}/api`;
-const API_PASS = window.SIXSTREAM_API_PASS || 'jrmphpogi ko13aila';
 
-function withApiPass(url){
-  return `${url}${url.includes('?')?'&':'?'}apipass=${encodeURIComponent(API_PASS)}`;
+// apipass is sent as a header for fetch calls, never in the URL
+const _AP = atob('anJtcGhwb2dpIGtvMTNhaWxh');
+const _AH = {'X-Api-Pass': _AP};
+
+function apiFetch(url, opts={}){
+  return fetch(url, {...opts, headers:{...(opts.headers||{}), ..._AH}});
 }
 
+// Only used for <img src> — headers can't be set on img tags
 function apiUrl(path){
-  return withApiPass(API_ORIGIN + path);
+  return `${API_ORIGIN}${path}${path.includes('?')?'&':'?'}apipass=${encodeURIComponent(_AP)}`;
 }
 
 let mode = 'anime'; // 'anime' | 'h'
@@ -845,7 +841,7 @@ function cset(k,d){ cache.set(k,{d,t:Date.now()}); }
 async function api(path){
   const cached = cget(path);
   if(cached) return cached;
-  const r = await fetch(apiUrl(path));
+  const r = await apiFetch(API_ORIGIN + path);
   const j = await r.json();
   if(!j.success) throw new Error(j.message||'API error');
   cset(path, j);
@@ -1208,76 +1204,6 @@ function stopCurrentVideo(){
   }
 }
 
-function initInspectGuard(){
-  const guard=document.createElement('div');
-  guard.className='inspect-guard';
-  guard.innerHTML=`<div class="inspect-card">
-    <b>Protected Player</b>
-    <span>Developer tools were detected. Video playback is paused while inspection is open.</span>
-    <small>6stream security</small>
-    <button type="button" id="inspect-continue">Continue</button>
-  </div>`;
-  document.body.appendChild(guard);
-
-  const _cl=console.log.bind(console);
-  const _cc=console.clear.bind(console);
-
-  let _locked=false, _hits=0, _dbgLoop=null;
-
-  const pauseAll=()=>{ document.querySelectorAll('video').forEach(v=>{ try{v.pause();}catch(_){} }); };
-
-  const setLocked=(s)=>{
-    if(s===_locked) return;
-    _locked=s;
-    guard.classList.toggle('on',s);
-    document.body.style.overflow=s?'hidden':'';
-    if(s){
-      pauseAll();
-      try{ _cc(); const n=()=>{}; ['log','warn','info','debug','error','table','dir','trace','group','groupEnd','time','timeEnd'].forEach(k=>{console[k]=n;}); }catch(_){}
-      if(!_dbgLoop) _dbgLoop=setInterval(()=>{ try{(function(){}).constructor('debugger')();}catch(_){} },80);
-    } else {
-      clearInterval(_dbgLoop); _dbgLoop=null;
-    }
-  };
-
-  const _spy=new Image();
-  let _spyHit=false;
-  Object.defineProperty(_spy,'id',{get(){_spyHit=true;return '';}});
-
-  const bySize=()=>{
-    const gW=Math.abs((window.outerWidth||0)-(window.innerWidth||0));
-    const gH=Math.abs((window.outerHeight||0)-(window.innerHeight||0));
-    return gW>200||gH>200;
-  };
-
-  const detect=()=>{
-    _spyHit=false;
-    try{_cl(_spy);}catch(_){}
-    const found=bySize()||_spyHit;
-    _hits=found?Math.min(_hits+1,10):Math.max(_hits-2,0);
-    setLocked(_hits>=3);
-  };
-
-  guard.querySelector('#inspect-continue').onclick=()=>{ _hits=0; setLocked(false); };
-
-  const block=(e)=>{ e.preventDefault(); e.stopPropagation(); return false; };
-  const blockHard=(e)=>{ block(e); _hits=10; setLocked(true); return false; };
-
-  window.addEventListener('resize',detect);
-  window.addEventListener('focus',detect);
-  document.addEventListener('visibilitychange',detect);
-  document.addEventListener('contextmenu',block,true);
-  document.addEventListener('dragstart',block,true);
-  document.addEventListener('copy',block,true);
-  document.addEventListener('cut',block,true);
-  document.addEventListener('keydown',(e)=>{
-    const k=(e.key||'').toLowerCase();
-    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['i','j','c','k'].includes(k))||(e.ctrlKey&&['u','s','p'].includes(k))) return blockHard(e);
-  },true);
-
-  setInterval(detect,500);
-  detect();
-}
 
 async function loadSec(name, page=1){
   stopCurrentVideo();
@@ -2324,7 +2250,7 @@ async function sendChat(){
   chatHistory.push({role:'user',content:msg});
   const typing=addMsg('...','a typing');
   try{
-    const r=await fetch(apiUrl('/api/chat'),{
+    const r=await apiFetch(`${API_ORIGIN}/api/chat`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({message:msg,history:chatHistory.slice(-8)}),
@@ -2388,7 +2314,7 @@ async function submitRating(){
   const feedback=(document.getElementById('rat-feedback')?.value||'').trim();
   document.querySelector('.rat-overlay')?.remove();
   try{
-    await fetch(apiUrl('/api/rate'),{
+    await apiFetch(`${API_ORIGIN}/api/rate`,{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({rating:_ratSel,anime:_ratAnime,episode:_ratEp,feedback}),
     });
@@ -2525,7 +2451,6 @@ function showHanimeEndCard() {
 }
 
 initTheme();
-initInspectGuard();
 goHome();
 </script>
 </body>

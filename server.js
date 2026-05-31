@@ -133,7 +133,7 @@ app.use((req, res, next) => {
     refreshAllowedOrigins();
   }
 
-  const hasValidPass = req.query.apipass === API_PASS;
+  const hasValidPass = req.query.apipass === API_PASS || req.headers['x-api-pass'] === API_PASS;
 
   const origin = normalizeOrigin(req.headers.origin);
   const refererOrigin = normalizeOrigin(req.headers.referer);
@@ -533,7 +533,7 @@ app.get("/api/hls", wrap(async (req, res) => {
 
   const isM3U8req = url.includes(".m3u8");
   const isVttReq  = url.includes(".vtt");
-  const hlsPass = req.query.apipass === API_PASS ? String(req.query.apipass) : "";
+  const hlsPass = (req.query.apipass === API_PASS || req.headers['x-api-pass'] === API_PASS) ? API_PASS : "";
   const hlsCacheKey = `${url}|pass:${hlsPass ? "1" : "0"}`;
   const wantsDownload = req.query.download === "1";
   const cleanDownloadName = String(req.query.name || "source")
