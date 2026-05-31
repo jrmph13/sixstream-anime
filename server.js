@@ -640,23 +640,48 @@ app.get("/api/hls-download", wrap(async (req, res) => {
     return res.status(404).json({ success: false, message: "No segments found in playlist." });
   }
 
-  // Watermark filter — platform-aware font path
+  // Platform-aware font path
   const wmFont = process.platform === "win32"
     ? "C\\:/Windows/Fonts/arialbd.ttf"
     : "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+
+  // Watermark drawn on main video (top-right corner)
   const wmFilter = `drawtext=fontfile='${wmFont}':text='6stream':x=w-tw-18:y=18:fontsize=max(20\\,h*0.045):fontcolor=white@0.60:shadowcolor=black@0.82:shadowx=2:shadowy=2`;
 
-  // Spawn ffmpeg — reads concatenated TS from stdin, writes fragmented MP4 to stdout
+  // Intro clip — 2.5s black screen with 6stream branding + fill bar
+  const introChain = [
+    `fade=t=in:st=0:d=0.4`,
+    `drawbox=x=240:y=500:w=800:h=8:color=white@0.12:thickness=fill`,
+    `drawbox=x=242:y=502:w=796:h=4:color=0xa855f7@0.9:thickness=fill`,
+    `drawtext=fontfile='${wmFont}':text='6stream':fontsize=90:fontcolor=white:x=(w-tw)/2:y=(h/2-80):shadowcolor=black@0.55:shadowx=3:shadowy=3`,
+    `drawtext=fontfile='${wmFont}':text='by jhames martin':fontsize=28:fontcolor=white@0.55:x=(w-tw)/2:y=(h/2+18)`,
+  ].join(",");
+
+  // filter_complex:
+  //   [0:v] = lavfi intro → add text/bar chain → [intro_v]
+  //   [1:v] = main video  → scale to 720p, fps=24, watermark → [main_v]
+  //   concat → [out_v]
+  //   [1:a] → delay 2500ms to sync with intro → [out_a]
+  const filterComplex =
+    `[0:v]${introChain}[intro_v];` +
+    `[1:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=24,${wmFilter}[main_v];` +
+    `[intro_v][main_v]concat=n=2:v=1:a=0[out_v];` +
+    `[1:a]aformat=channel_layouts=stereo:sample_rates=44100,adelay=2500|2500[out_a]`;
+
+  // Spawn ffmpeg:
+  //   input 0 = lavfi color source (2.5s intro)
+  //   input 1 = main TS stream from stdin (video segments)
   const ff = spawn(ffmpegPath, [
     "-hide_banner", "-loglevel", "error",
+    "-f", "lavfi", "-i", "color=c=#0f0f13:s=1280x720:r=24:d=2.5",
     "-f", "mpegts", "-i", "pipe:0",
-    "-map", "0:v:0?", "-map", "0:a:0?",
-    "-vf", wmFilter,
+    "-filter_complex", filterComplex,
+    "-map", "[out_v]",
+    "-map", "[out_a]",
     "-c:v", "libx264",
     "-preset", "veryfast",
     "-crf", "23",
-    "-c:a", "copy",
-    "-bsf:a", "aac_adtstoasc",
+    "-c:a", "aac",
     "-movflags", "frag_keyframe+empty_moov",
     "-f", "mp4", "pipe:1",
   ], { windowsHide: true });
