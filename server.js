@@ -134,13 +134,16 @@ app.use((req, res, next) => {
   }
 
   const hasValidPass = req.query.apipass === API_PASS || req.headers['x-api-pass'] === API_PASS;
+  // sec-fetch-site is set automatically by browsers and cannot be forged by JS.
+  // same-origin means the request came from our own page — no secret needed.
+  const isSameOrigin = req.headers['sec-fetch-site'] === 'same-origin';
 
   const origin = normalizeOrigin(req.headers.origin);
   const refererOrigin = normalizeOrigin(req.headers.referer);
   const requestOrigin = origin || refererOrigin;
-  const allowed = !requestOrigin || allowedOrigins.has(requestOrigin) || hasValidPass;
+  const allowed = !requestOrigin || allowedOrigins.has(requestOrigin) || hasValidPass || isSameOrigin;
 
-  if (req.path.startsWith("/api") && !requestOrigin && !hasValidPass) {
+  if (req.path.startsWith("/api") && !requestOrigin && !hasValidPass && !isSameOrigin) {
     return res.status(403).json({ error: "Forbidden" });
   }
 

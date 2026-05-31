@@ -805,18 +805,9 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 const API_ORIGIN = window.location.origin.replace(/\/$/, '');
 const API = `${API_ORIGIN}/api`;
 
-// apipass is sent as a header for fetch calls, never in the URL
-const _AP = atob('anJtcGhwb2dpIGtvMTNhaWxh');
-const _AH = {'X-Api-Pass': _AP};
-
-function apiFetch(url, opts={}){
-  return fetch(url, {...opts, headers:{...(opts.headers||{}), ..._AH}});
-}
-
-// Only used for <img src> — headers can't be set on img tags
-function apiUrl(path){
-  return `${API_ORIGIN}${path}${path.includes('?')?'&':'?'}apipass=${encodeURIComponent(_AP)}`;
-}
+// No apipass needed — browser sets sec-fetch-site: same-origin automatically
+function apiFetch(url, opts={}){ return fetch(url, opts); }
+function apiUrl(path){ return `${API_ORIGIN}${path}`; }
 
 let mode = 'anime'; // 'anime' | 'h'
 let currentSlug = null, currentEps = [], currentSvs = [], currentPage = 1;
