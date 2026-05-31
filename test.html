@@ -805,7 +805,6 @@ body.theme-light .inspect-card b{color:#0f172a;}
 const API_ORIGIN = window.location.origin.replace(/\/$/, '');
 const API = `${API_ORIGIN}/api`;
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let mode = 'anime'; // 'anime' | 'h'
 let currentSlug = null, currentEps = [], currentSvs = [], currentPage = 1;
 let currentSection = 'home';
@@ -826,7 +825,6 @@ const cache = new Map();
 function cget(k){ const v=cache.get(k); return v&&Date.now()-v.t<180000?v.d:null; }
 function cset(k,d){ cache.set(k,{d,t:Date.now()}); }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
 async function api(path){
   const cached = cget(path);
   if(cached) return cached;
@@ -951,7 +949,6 @@ function fmtDur(sec){
   return `${m}:${String(s).padStart(2,'0')}`;
 }
 
-// ── MODE ──────────────────────────────────────────────────────────────────────
 function setMode(m){
   mode = m;
   document.body.classList.toggle('mode-h', m==='h');
@@ -968,7 +965,6 @@ function setMode(m){
   goHome();
 }
 
-// ── ANIME CARDS ───────────────────────────────────────────────────────────────
 function card(a){
   const safeslug=(a.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const sub=a.sub?`<span class="sub-c">S${a.sub}</span>`:'';
@@ -997,7 +993,6 @@ function card(a){
 // Route hanime-cdn.com images through our proxy (403 without Referer)
 function hImg(url){ return url ? `${API_ORIGIN}/api/img-proxy?url=${encodeURIComponent(url)}` : ''; }
 
-// ── HANIME CARDS ──────────────────────────────────────────────────────────────
 function hCard(v){
   const safeslug=(v.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const imgSrc=hImg(v.poster||v.cover||'');
@@ -1149,7 +1144,6 @@ function moveHero(step){
   },220);
 }
 
-// ── ANIME HOME ────────────────────────────────────────────────────────────────
 async function goHome(){
   stopCurrentVideo();
   const loadId=++homeLoadId;
@@ -1208,47 +1202,55 @@ function initInspectGuard(){
   </div>`;
   document.body.appendChild(guard);
 
-  let lastState=false;
-  let detectHits=0;
-  const pauseAll=()=>{
-    document.querySelectorAll('video').forEach(v=>{ try{ v.pause(); }catch(_){} });
-  };
-  const setLocked=(state)=>{
-    if(state===lastState) return;
-    lastState=state;
-    guard.classList.toggle('on', state);
-    document.body.style.overflow=state?'hidden':'';
-    if(state){
+  const _cl=console.log.bind(console);
+  const _cc=console.clear.bind(console);
+
+  let _locked=false, _hits=0, _dbgLoop=null;
+
+  const pauseAll=()=>{ document.querySelectorAll('video').forEach(v=>{ try{v.pause();}catch(_){} }); };
+
+  const setLocked=(s)=>{
+    if(s===_locked) return;
+    _locked=s;
+    guard.classList.toggle('on',s);
+    document.body.style.overflow=s?'hidden':'';
+    if(s){
       pauseAll();
-      try{
-        console.clear();
-        const noop=()=>{};
-        ['log','warn','info','debug','error','table','dir','trace'].forEach(k=>{ console[k]=noop; });
-      }catch(_){}
+      try{ _cc(); const n=()=>{}; ['log','warn','info','debug','error','table','dir','trace','group','groupEnd','time','timeEnd'].forEach(k=>{console[k]=n;}); }catch(_){}
+      if(!_dbgLoop) _dbgLoop=setInterval(()=>{ try{(function(){}).constructor('debugger')();}catch(_){} },80);
+    } else {
+      clearInterval(_dbgLoop); _dbgLoop=null;
     }
   };
+
+  const _spy=new Image();
+  let _spyHit=false;
+  Object.defineProperty(_spy,'id',{get(){_spyHit=true;return '';}});
+
+  const bySize=()=>{
+    const gW=Math.abs((window.outerWidth||0)-(window.innerWidth||0));
+    const gH=Math.abs((window.outerHeight||0)-(window.innerHeight||0));
+    return gW>160||gH>160;
+  };
+
+  const byDebugger=()=>{
+    const t=performance.now();
+    try{(function(){}).constructor('debugger')();}catch(_){}
+    return performance.now()-t>200;
+  };
+
   const detect=()=>{
-    const gapW=Math.abs((window.outerWidth||0)-(window.innerWidth||0));
-    const gapH=Math.abs((window.outerHeight||0)-(window.innerHeight||0));
-    const suspected=gapW>320 || gapH>320;
-    detectHits=suspected?detectHits+1:0;
-    setLocked(detectHits>=3);
+    _spyHit=false;
+    try{_cl(_spy);}catch(_){}
+    const found=bySize()||_spyHit||byDebugger();
+    _hits=found?Math.min(_hits+1,10):Math.max(_hits-1,0);
+    setLocked(_hits>=2);
   };
-  guard.querySelector('#inspect-continue').onclick=()=>{
-    detectHits=0;
-    setLocked(false);
-  };
-  const block=(e)=>{
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-  };
-  const blockHard=(e)=>{
-    block(e);
-    detectHits=3;
-    setLocked(true);
-    return false;
-  };
+
+  guard.querySelector('#inspect-continue').onclick=()=>{ _hits=0; setLocked(false); };
+
+  const block=(e)=>{ e.preventDefault(); e.stopPropagation(); return false; };
+  const blockHard=(e)=>{ block(e); _hits=10; setLocked(true); return false; };
 
   window.addEventListener('resize',detect);
   window.addEventListener('focus',detect);
@@ -1258,20 +1260,14 @@ function initInspectGuard(){
   document.addEventListener('copy',block,true);
   document.addEventListener('cut',block,true);
   document.addEventListener('keydown',(e)=>{
-    const key=(e.key||'').toLowerCase();
-    const blocked=e.key==='F12' ||
-      (e.ctrlKey&&e.shiftKey&&['i','j','c'].includes(key)) ||
-      (e.ctrlKey&&['u','s','p','c','x','a'].includes(key));
-    if(blocked){
-      return blockHard(e);
-    }
+    const k=(e.key||'').toLowerCase();
+    if(e.key==='F12'||(e.ctrlKey&&e.shiftKey&&['i','j','c','k'].includes(k))||(e.ctrlKey&&['u','s','p'].includes(k))) return blockHard(e);
   },true);
 
-  setInterval(detect,2500);
+  setInterval(detect,500);
   detect();
 }
 
-// ── ANIME SECTIONS ────────────────────────────────────────────────────────────
 async function loadSec(name, page=1){
   stopCurrentVideo();
   showPage('home');
@@ -1313,7 +1309,6 @@ async function loadGenre(id, el){
   }catch(e){ c.innerHTML=`<div class="empty">${e.message}</div>`; }
 }
 
-// ── HANIME HOME ───────────────────────────────────────────────────────────────
 async function hGoHome(loadId=++homeLoadId){
   const c=document.getElementById('home-content');
   c.innerHTML=`
@@ -1345,7 +1340,6 @@ async function hGoHome(loadId=++homeLoadId){
   }
 }
 
-// ── HANIME SECTIONS ───────────────────────────────────────────────────────────
 async function hLoadSec(name, page=0){
   stopCurrentVideo();
   showPage('home');
@@ -1387,7 +1381,6 @@ async function hLoadTag(encodedTag, tagName, el){
   }catch(e){ c.innerHTML=`<div class="empty">${e.message}</div>`; }
 }
 
-// ── SEARCH ────────────────────────────────────────────────────────────────────
 const qi=document.getElementById('qi'), sdd=document.getElementById('sdd');
 let qt;
 document.getElementById('drawer-q')?.addEventListener('keydown',e=>{
@@ -1457,7 +1450,6 @@ async function doSearch(){
   }catch(e){toast(e.message,false);}
 }
 
-// ── ANIME MODAL ───────────────────────────────────────────────────────────────
 let _modalSlug=null, _modalEps=[];
 
 async function openModal(slug){
@@ -1550,7 +1542,6 @@ async function openModal(slug){
   document.getElementById('modal-status').textContent=eps.length?`${eps.length} episodes`:'';
 }
 
-// ── HANIME MODAL ──────────────────────────────────────────────────────────────
 let _hModalData=null;
 
 async function hOpenModal(slug){
@@ -1630,7 +1621,6 @@ function watchFromModal(epIdx){
   openWatch(_modalSlug, _modalEps, epIdx);
 }
 
-// ── ANIME WATCH ───────────────────────────────────────────────────────────────
 function openWatch(slug, eps, startIdx=0){
   stopCurrentVideo();
   currentSlug=slug; currentEps=eps; currentSvs=[]; activeEpIdx=-1;
@@ -1712,7 +1702,6 @@ async function selectServer(idx){
   }
 }
 
-// ── HANIME WATCH ──────────────────────────────────────────────────────────────
 async function hStartWatch(slug){
   stopCurrentVideo();
   clearDownload();
@@ -1967,7 +1956,6 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
   };
   playBtn.onclick=togglePlayback;
 
-  // ── Double-tap (mobile) / double-click (desktop) seek ─────────────────
   const SEEK_SEC=10;
   let _tapLast=0, _tapSide=null, _tapTimer2=null;
   let _tsX=0, _tsY=0;
@@ -2032,9 +2020,7 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
     const rect=wrap.getBoundingClientRect();
     doVideoSeek(e.clientX-rect.left<rect.width/2);
   });
-  // ──────────────────────────────────────────────────────────────────────
 
-  // ── Keyboard controls ─────────────────────────────────────────────────
   if(_keyHandler) document.removeEventListener('keydown', _keyHandler);
   _keyHandler=(e)=>{
     if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
@@ -2074,7 +2060,6 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
     }
   };
   document.addEventListener('keydown', _keyHandler);
-  // ──────────────────────────────────────────────────────────────────────
 
   muteBtn.onclick=()=>{ v.muted=!v.muted; sync(); };
   volume.oninput=()=>{ v.volume=parseFloat(volume.value); v.muted=v.volume===0; sync(); };
@@ -2147,7 +2132,6 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
   showControls();
 }
 
-// ── HLS PLAYER ────────────────────────────────────────────────────────────────
 let _activeHls = null;
 
 function playHLS(m3u8Url, subs, intro, outro, badge=null){
@@ -2227,7 +2211,6 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
   }
 }
 
-// ── Whoosh SFX (Web Audio — no file needed) ───────────────────────────────────
 function playWhoosh(){
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
@@ -2268,7 +2251,6 @@ function playWhoosh(){
   }catch(_){}
 }
 
-// ── Mobile search ─────────────────────────────────────────────────────────────
 function toggleMobSearch(){
   const bar=document.getElementById('mob-srch-bar');
   const inp=document.getElementById('mob-srch-input');
@@ -2295,7 +2277,6 @@ document.getElementById('mob-srch-input')?.addEventListener('input',e=>{
   qt=setTimeout(()=>mode==='h'?hLiveSrch(v):liveSrch(v),340);
 });
 
-// ── AI Chat ───────────────────────────────────────────────────────────────────
 const chatHistory = [];
 function toggleChat(){
   const panel=document.getElementById('chat-panel');
@@ -2337,7 +2318,6 @@ async function sendChat(){
 }
 document.getElementById('chat-in')?.addEventListener('keydown',e=>{ if(e.key==='Enter') sendChat(); });
 
-// ── Episode Rating ─────────────────────────────────────────────────────────────
 let _ratSel=0, _ratAfter=null, _ratAnime='', _ratEp='';
 const _ratLabels=['','Poor 😐','Fair 🙂','Good 😊','Excellent! 🔥'];
 
@@ -2398,7 +2378,6 @@ function dismissRating(){
   const fn=_ratAfter; _ratAfter=null; if(fn) fn();
 }
 
-// ── Top 10 ────────────────────────────────────────────────────────────────────
 async function loadTop10(){
   stopCurrentVideo();
   showPage('home');
@@ -2429,7 +2408,6 @@ async function loadTop10(){
   }catch(e){ document.getElementById('t10-list').innerHTML=`<div class="empty">${e.message}</div>`; }
 }
 
-// ── Auto-next episode ─────────────────────────────────────────────────────────
 let _autoNextTimer = null;
 let _keyHandler = null;
 
@@ -2523,7 +2501,6 @@ function showHanimeEndCard() {
   wrap.appendChild(overlay);
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 initTheme();
 initInspectGuard();
 goHome();
