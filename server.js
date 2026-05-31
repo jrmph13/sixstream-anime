@@ -1165,20 +1165,6 @@ footer strong{color:var(--txt);}
     <div class="card-hd">Cross-Domain Auth</div>
     <p style="font-size:.8rem;color:var(--muted);margin-bottom:10px;">Requests from <strong style="color:var(--txt)">unlisted domains</strong> must include <code style="color:#fbbf24">?apipass=&lt;key&gt;</code> on every call.</p>
     <div class="auth-key">GET /api/home?apipass=jrmphpogi ko13aila</div>
-    <div class="card-hd" style="margin-top:12px;">Whitelisted Origins (no key needed)</div>
-    <div class="origin-list">
-      <span class="origin-tag">6stream.vercel.app</span>
-      <span class="origin-tag">sixstream.onrender.com</span>
-      <span class="origin-tag">6stream.onrender.com</span>
-      <span class="origin-tag">localhost:3000</span>
-    </div>
-  </div>
-
-  <div class="info-row">
-    <div class="info-chip"><div class="ic-label">Anime Source</div><div class="ic-val">anisuge.se</div></div>
-    <div class="info-chip"><div class="ic-label">18+ Source</div><div class="ic-val">hanime.tv</div></div>
-    <div class="info-chip"><div class="ic-label">Cache TTL</div><div class="ic-val">2 – 5 min</div></div>
-    <div class="info-chip"><div class="ic-label">HLS Segments</div><div class="ic-val">Streamed live</div></div>
   </div>
 
   <div class="sec">
