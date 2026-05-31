@@ -492,6 +492,11 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .vc-quality{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 7px;font-size:.74rem;outline:none;cursor:pointer;}
 .vc-quality option{background:#1a1a2e;color:#fff;}
 
+/* BUFFERING SPINNER */
+.buf-spin{position:absolute;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;pointer-events:none;background:rgba(0,0,0,.28);opacity:0;transition:opacity .2s;}
+.buf-spin.show{opacity:1;}
+.buf-ring{width:48px;height:48px;border:4px solid rgba(255,255,255,.22);border-top-color:#fff;border-radius:50%;animation:rot .72s linear infinite;}
+
 /* AUTO-NEXT EPISODE */
 .auto-next-overlay{position:absolute;inset:0;z-index:40;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
 .auto-next-card{background:rgba(15,23,42,.96);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:22px 26px;text-align:center;min-width:210px;max-width:290px;box-shadow:0 20px 60px rgba(0,0,0,.55);}
@@ -1230,21 +1235,15 @@ function initInspectGuard(){
   const bySize=()=>{
     const gW=Math.abs((window.outerWidth||0)-(window.innerWidth||0));
     const gH=Math.abs((window.outerHeight||0)-(window.innerHeight||0));
-    return gW>160||gH>160;
-  };
-
-  const byDebugger=()=>{
-    const t=performance.now();
-    try{(function(){}).constructor('debugger')();}catch(_){}
-    return performance.now()-t>200;
+    return gW>200||gH>200;
   };
 
   const detect=()=>{
     _spyHit=false;
     try{_cl(_spy);}catch(_){}
-    const found=bySize()||_spyHit||byDebugger();
-    _hits=found?Math.min(_hits+1,10):Math.max(_hits-1,0);
-    setLocked(_hits>=2);
+    const found=bySize()||_spyHit;
+    _hits=found?Math.min(_hits+1,10):Math.max(_hits-2,0);
+    setLocked(_hits>=3);
   };
 
   guard.querySelector('#inspect-continue').onclick=()=>{ _hits=0; setLocked(false); };
@@ -2103,6 +2102,18 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
     if(Number.isFinite(v.duration) && v.duration>0) v.currentTime=(parseInt(progress.value,10)/1000)*v.duration;
     seeking=false; sync();
   };
+
+  const bufSpin=document.createElement('div');
+  bufSpin.className='buf-spin';
+  bufSpin.innerHTML='<div class="buf-ring"></div>';
+  wrap.appendChild(bufSpin);
+  const showBuf=(s)=>bufSpin.classList.toggle('show',s);
+  v.addEventListener('waiting',()=>showBuf(true));
+  v.addEventListener('playing',()=>showBuf(false));
+  v.addEventListener('canplay',()=>showBuf(false));
+  v.addEventListener('stalled',()=>showBuf(true));
+  v.addEventListener('seeking',()=>showBuf(true));
+  v.addEventListener('seeked',()=>showBuf(false));
 
   ['loadedmetadata','timeupdate','play','pause','volumechange','durationchange'].forEach(ev=>v.addEventListener(ev,sync));
   ['loadedmetadata','loadeddata','canplay'].forEach(ev=>v.addEventListener(ev,setupSubtitles));
