@@ -895,6 +895,35 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
   imgRes.data.pipe(res);
 }));
 
+// ── Generic video download proxy (adds Referer so CDNs don't 403) ────────────
+app.get("/api/dl", wrap(async (req, res) => {
+  const url = req.query.url;
+  const name = String(req.query.name || "video.mp4")
+    .replace(/[<>"\\/:*?|]+/g, "_")
+    .slice(0, 200);
+  if (!url || !url.startsWith("http")) {
+    return res.status(400).json({ error: "url required" });
+  }
+  const referer = refererFor(url);
+  const r = await axios.get(url, {
+    responseType: "stream",
+    timeout: 60000,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "Referer": referer,
+      "Origin": referer.replace(/\/$/, ""),
+      "Accept": "*/*",
+    },
+    validateStatus: (s) => s < 500,
+  });
+  res.status(r.status);
+  res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+  res.setHeader("Content-Type", r.headers["content-type"] || "video/mp4");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (r.headers["content-length"]) res.setHeader("Content-Length", r.headers["content-length"]);
+  r.data.pipe(res);
+}));
+
 // ── Secret API Docs ───────────────────────────────────────────────────────────
 app.get("/jopay/jhames/api/doc/", (req, res) => {
   res.setHeader("Cache-Control", "no-store");

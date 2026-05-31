@@ -521,6 +521,18 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 @keyframes seekRipple{0%{opacity:0;transform:scaleX(.55)}18%{opacity:1;transform:scaleX(1)}78%{opacity:.85}100%{opacity:0;transform:scaleX(1.08)}}
 @keyframes seekFadeInOut{0%{opacity:0;transform:scale(.7)}20%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:scale(1.05)}}
 
+/* MOBILE SEARCH BAR */
+.mob-srch-btn{display:none;}
+@media(max-width:760px){
+  .mob-srch-btn{display:flex;margin-left:auto;}
+  #mob-srch-bar{display:none;position:fixed;top:54px;left:0;right:0;z-index:199;background:var(--bg2);border-bottom:2px solid var(--accent);padding:8px 12px;gap:8px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.3);}
+  #mob-srch-bar.open{display:flex;}
+  #mob-srch-input{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:.93rem;outline:none;}
+  #mob-srch-input:focus{border-color:var(--accent);}
+  .mob-srch-go{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:0 18px;height:38px;font-weight:700;font-size:.85rem;cursor:pointer;flex-shrink:0;}
+  .mob-srch-close{background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:8px;width:38px;height:38px;cursor:pointer;flex-shrink:0;font-size:1rem;display:flex;align-items:center;justify-content:center;}
+}
+
 /* INSPECT GUARD */
 .inspect-guard{position:fixed;inset:0;z-index:9999;background:rgba(5,5,9,.94);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;text-align:center;padding:24px;}
 .inspect-guard.on{display:flex;}
@@ -539,6 +551,9 @@ body.theme-light .inspect-card b{color:#0f172a;}
     <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
   </button>
   <div class="logo" onclick="goHome()">6<span>stream</span></div>
+  <button class="menu-btn mob-srch-btn" onclick="toggleMobSearch()" title="Search" aria-label="Search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+  </button>
 
   <!-- MODE TOGGLE -->
   <div class="mode-toggle">
@@ -570,6 +585,12 @@ body.theme-light .inspect-card b{color:#0f172a;}
     <button onclick="hLoadSec('tags')"     id="nb-tags">Tags</button>
   </div>
 </nav>
+
+<div id="mob-srch-bar">
+  <input id="mob-srch-input" type="search" placeholder="Search anime..." autocomplete="off" inputmode="search"/>
+  <button class="mob-srch-go" onclick="doMobSearch()">Search</button>
+  <button class="mob-srch-close" onclick="toggleMobSearch()">✕</button>
+</div>
 
 <div class="drawer-scrim" id="drawer-scrim" onclick="closeDrawer()"></div>
 <aside class="drawer" id="drawer" inert>
@@ -771,7 +792,7 @@ function setDownload(url, title='HD Download', note='6Stream source download', f
     <div class="download-title">${title}</div>
     <div class="download-note">${note}</div>
   </div>
-  <a class="download-btn" href="${url}" target="_blank" rel="noopener" download="${filename}">${downloadIcon()}<span>Download</span></a>`;
+  <a class="download-btn" href="${url}" download="${filename}">${downloadIcon()}<span>Download</span></a>`;
   panel.classList.add('show');
 }
 
@@ -1674,7 +1695,8 @@ function hSelectSource(idx){
     <div class="watch-type-badge mp4">MP4</div>`;
     enhanceVideo('hv');
     document.getElementById('hv')?.play().catch(()=>{});
-    setDownload(src.url,'HD Download','Direct MP4 source',`6Stream-jhamesmartin-${baseName}.mp4`);
+    const mp4DlUrl=`${API_ORIGIN}/api/dl?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent('6Stream-jhamesmartin-'+baseName+'.mp4')}`;
+    setDownload(mp4DlUrl,'HD Download','Direct MP4 source',`6Stream-jhamesmartin-${baseName}.mp4`);
     toast('MP4 stream', true);
 
   } else if(src.kind==='direct'){
@@ -2130,6 +2152,33 @@ function playWhoosh(){
     src.onended=()=>{ try{ if(ctx.state!=='closed') ctx.close().catch(()=>{}); }catch(_){} };
   }catch(_){}
 }
+
+// ── Mobile search ─────────────────────────────────────────────────────────────
+function toggleMobSearch(){
+  const bar=document.getElementById('mob-srch-bar');
+  const inp=document.getElementById('mob-srch-input');
+  const open=bar.classList.toggle('open');
+  if(open){ inp?.focus(); }
+  else { if(inp) inp.value=''; sdd.classList.remove('open'); }
+}
+function doMobSearch(){
+  const q=(document.getElementById('mob-srch-input')?.value||'').trim();
+  if(!q) return;
+  qi.value=q;
+  toggleMobSearch();
+  doSearch();
+}
+document.getElementById('mob-srch-input')?.addEventListener('keydown',e=>{
+  if(e.key==='Enter') doMobSearch();
+  if(e.key==='Escape') toggleMobSearch();
+});
+document.getElementById('mob-srch-input')?.addEventListener('input',e=>{
+  const v=(e.target.value||'').trim();
+  if(!v){ sdd.classList.remove('open'); return; }
+  qi.value=v;
+  clearTimeout(qt);
+  qt=setTimeout(()=>mode==='h'?hLiveSrch(v):liveSrch(v),340);
+});
 
 // ── Auto-next episode ─────────────────────────────────────────────────────────
 let _autoNextTimer = null;
