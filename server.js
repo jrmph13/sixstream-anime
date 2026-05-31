@@ -144,11 +144,11 @@ app.use((req, res, next) => {
   const allowed = !requestOrigin || allowedOrigins.has(requestOrigin) || hasValidPass || isSameOrigin;
 
   if (req.path.startsWith("/api") && !requestOrigin && !hasValidPass && !isSameOrigin) {
-    return res.status(403).json({ error: "Forbidden" });
+    return res.status(403).json({ message: "Dont try to scrape this u gay", status: "blocked", reason: "nice try pero no" });
   }
 
   if (requestOrigin && !allowed) {
-    return res.status(403).json({ error: "Forbidden" });
+    return res.status(403).json({ message: "Dont try to scrape this u gay", status: "blocked", reason: "nice try pero no" });
   }
 
   if (origin) {
@@ -993,7 +993,7 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
   const allowed = ["hanime-cdn.com","hanime.tv","cdn.hanime","highwinds-cdn.com"];
   const host = (() => { try { return new URL(url).hostname; } catch(_) { return ""; } })();
   if (!allowed.some(h => host.endsWith(h))) {
-    return res.status(403).send("forbidden");
+    return res.status(403).json({ message: "Dont try to scrape this u gay", status: "blocked", reason: "nice try pero no" });
   }
   const imgRes = await axios.get(url, {
     responseType: "stream",
