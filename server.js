@@ -43,7 +43,10 @@ const ACCESS_LIST_URL = process.env.ACCESS_LIST_URL || Buffer.from(
   "base64"
 ).toString("utf8");
 
-const API_PASS = "jrmphpogi ko13aila";
+const API_PASS   = "jrmphpogi ko13aila";
+const GROQ_KEY   = "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";
+const TG_TOKEN   = "8842418430:AAGb7rvW7_7IpHxJj8I4pNtFoAP-bPaWbgc";
+const TG_CHAT_ID = "6187159572";
 
 const normalizeOrigin = (value = "") => {
   const raw = String(value).trim();
@@ -967,6 +970,41 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
   res.setHeader("Cache-Control", "public, max-age=86400");
   res.setHeader("Access-Control-Allow-Origin", "*");
   imgRes.data.pipe(res);
+}));
+
+// ── AI Chat (Groq) ────────────────────────────────────────────────────────────
+app.post("/api/chat", wrap(async (req, res) => {
+  const { message, history = [] } = req.body || {};
+  if (!message) return res.status(400).json({ error: "message required" });
+  const r = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      {
+        role: "system",
+        content: "You are an anime expert AI assistant for 6stream. Help users find anime to watch, give recommendations, explain plots and characters, and answer anime questions. Be friendly and enthusiastic. Keep replies under 180 words. Use emojis occasionally.",
+      },
+      ...history.slice(-8),
+      { role: "user", content: message },
+    ],
+    max_tokens: 300,
+    temperature: 0.7,
+  }, {
+    headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
+    timeout: 30000,
+  });
+  res.json({ success: true, reply: r.data.choices[0].message.content });
+}));
+
+// ── Send episode rating to Telegram ──────────────────────────────────────────
+app.post("/api/rate", wrap(async (req, res) => {
+  const { rating, anime, episode } = req.body || {};
+  if (!rating) return res.status(400).json({ error: "rating required" });
+  const stars = "⭐".repeat(Math.min(4, Math.max(1, parseInt(rating))));
+  const text = `${stars} <b>Episode Rated ${rating}/4</b>\n\n📺 <b>${anime || "Unknown"}</b>\n📑 ${episode || ""}`;
+  await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+    chat_id: TG_CHAT_ID, text, parse_mode: "HTML",
+  }, { timeout: 10000 });
+  res.json({ success: true });
 }));
 
 // ── Generic video download proxy (adds Referer so CDNs don't 403) ────────────

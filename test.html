@@ -559,6 +559,57 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
   #mob-srch-bar{top:54px;}
 }
 
+/* AI CHAT */
+#chat-wrap{position:fixed;bottom:22px;right:22px;z-index:800;}
+#chat-toggle{width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(124,58,237,.55);transition:transform .2s,box-shadow .2s;}
+#chat-toggle:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(124,58,237,.7);}
+#chat-toggle svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+#chat-panel{position:absolute;bottom:62px;right:0;width:310px;height:440px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 10px 48px rgba(0,0,0,.45);}
+#chat-panel.open{display:flex;}
+#chat-head{background:var(--accent);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#chat-head-name{font-weight:800;color:#fff;font-size:.88rem;display:flex;align-items:center;gap:7px;}
+#chat-head-name::before{content:'';width:7px;height:7px;border-radius:50%;background:#4ade80;flex-shrink:0;}
+#chat-close{background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem;line-height:1;}
+#chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+#chat-msgs::-webkit-scrollbar{width:3px;}
+#chat-msgs::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
+.cmsg{max-width:87%;padding:8px 11px;border-radius:10px;font-size:.79rem;line-height:1.5;word-break:break-word;}
+.cmsg.u{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:3px;}
+.cmsg.a{background:var(--bg3);color:var(--text);align-self:flex-start;border-bottom-left-radius:3px;}
+.cmsg.typing{opacity:.55;}
+#chat-bar{display:flex;gap:6px;padding:9px 10px;border-top:1px solid var(--border);flex-shrink:0;}
+#chat-in{flex:1;min-width:0;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:.82rem;outline:none;font-family:inherit;}
+#chat-in:focus{border-color:var(--accent);}
+#chat-send{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:0 12px;cursor:pointer;font-weight:700;font-size:.8rem;flex-shrink:0;}
+@media(max-width:400px){#chat-panel{width:calc(100vw - 28px);right:-8px;}}
+
+/* EPISODE RATING */
+.rat-overlay{position:absolute;inset:0;z-index:45;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.rat-card{background:rgba(15,23,42,.97);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:22px 26px;text-align:center;min-width:230px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.rat-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:900;margin-bottom:5px;}
+.rat-ep{font-size:.84rem;font-weight:700;color:#fff;margin-bottom:16px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rat-stars{display:flex;justify-content:center;gap:6px;margin-bottom:10px;}
+.rat-star{font-size:2.1rem;cursor:pointer;opacity:.28;transition:all .15s;user-select:none;}
+.rat-star.on,.rat-star:hover~.rat-star{opacity:1;}
+.rat-stars:hover .rat-star{opacity:1;}
+.rat-stars:hover .rat-star:hover~.rat-star{opacity:.28;}
+.rat-note{font-size:.7rem;color:var(--muted);min-height:18px;margin-bottom:14px;}
+.rat-btns{display:flex;gap:8px;justify-content:center;}
+.rat-btn{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;border-radius:8px;padding:7px 16px;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .18s;}
+.rat-btn:hover{background:rgba(255,255,255,.14);}
+.rat-btn.primary{background:var(--accent);border-color:var(--accent);}
+.rat-btn.primary:hover{filter:brightness(1.1);}
+.rat-btn:disabled{opacity:.45;cursor:default;}
+
+/* TOP 10 */
+.t10-item{display:grid;grid-template-columns:42px 58px 1fr;gap:11px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:border-color .18s,transform .18s;}
+.t10-item:hover{border-color:var(--accent);transform:translateX(4px);}
+.t10-rank{font-size:1.5rem;font-weight:900;text-align:center;}
+.t10-rank.g{color:#f59e0b;}.t10-rank.s{color:#94a3b8;}.t10-rank.b{color:#b45309;}
+.t10-img{width:58px;height:82px;object-fit:cover;border-radius:6px;background:var(--bg3);}
+.t10-title{font-size:.84rem;font-weight:700;line-height:1.3;margin-bottom:4px;}
+.t10-meta{font-size:.72rem;color:var(--muted);}
+
 /* INSPECT GUARD */
 .inspect-guard{position:fixed;inset:0;z-index:9999;background:rgba(5,5,9,.94);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;text-align:center;padding:24px;}
 .inspect-guard.on{display:flex;}
@@ -602,6 +653,7 @@ body.theme-light .inspect-card b{color:#0f172a;}
     <button onclick="loadSec('latest')"  id="nb-latest">Latest</button>
     <button onclick="loadSec('popular')" id="nb-popular">Popular</button>
     <button onclick="loadSec('genres')"  id="nb-genres">Genres</button>
+    <button onclick="loadTop10()"        id="nb-top10">Top 10</button>
   </div>
 
   <!-- Hanime nav buttons -->
@@ -609,6 +661,7 @@ body.theme-light .inspect-card b{color:#0f172a;}
     <button onclick="hLoadSec('trending')" id="nb-trending">Trending</button>
     <button onclick="hLoadSec('new')"      id="nb-new">New</button>
     <button onclick="hLoadSec('tags')"     id="nb-tags">Tags</button>
+    <button onclick="loadTop10()"          id="nb-htop10">Top 10</button>
   </div>
 </nav>
 
@@ -727,6 +780,26 @@ body.theme-light .inspect-card b{color:#0f172a;}
 </main>
 
 <div id="toast"></div>
+
+<!-- AI Chat -->
+<div id="chat-wrap">
+  <button id="chat-toggle" onclick="toggleChat()" title="AI Anime Assistant" aria-label="Chat">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+  <div id="chat-panel">
+    <div id="chat-head">
+      <div id="chat-head-name">6stream AI</div>
+      <button id="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div id="chat-msgs">
+      <div class="cmsg a">Hey! 👋 Ask me anything — recommendations, plots, top anime, hidden gems. I'm here to help!</div>
+    </div>
+    <div id="chat-bar">
+      <input id="chat-in" type="text" placeholder="Ask about anime..." autocomplete="off"/>
+      <button id="chat-send" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const API_ORIGIN = window.location.origin.replace(/\/$/, '');
@@ -1144,7 +1217,14 @@ function initInspectGuard(){
     lastState=state;
     guard.classList.toggle('on', state);
     document.body.style.overflow=state?'hidden':'';
-    if(state) pauseAll();
+    if(state){
+      pauseAll();
+      try{
+        console.clear();
+        const noop=()=>{};
+        ['log','warn','info','debug','error','table','dir','trace'].forEach(k=>{ console[k]=noop; });
+      }catch(_){}
+    }
   };
   const detect=()=>{
     const gapW=Math.abs((window.outerWidth||0)-(window.innerWidth||0));
@@ -2044,13 +2124,17 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
   v.addEventListener('play',showControls);
   v.addEventListener('ended',()=>{
     showControls();
-    if(currentEps && currentEps.length>0){
-      const nextIdx=activeEpIdx+1;
-      if(nextIdx<currentEps.length) showAutoNext(nextIdx);
-      else showEndOfSeries();
-    } else if(hCurrentRelated && hCurrentRelated.length>0){
-      showHanimeEndCard();
-    }
+    const animeTitle=(document.getElementById('watch-title')?.textContent||'').split('\n')[0].trim()||'Anime';
+    const afterRating=()=>{
+      if(currentEps && currentEps.length>0){
+        const nextIdx=activeEpIdx+1;
+        if(nextIdx<currentEps.length) showAutoNext(nextIdx);
+        else showEndOfSeries();
+      } else if(hCurrentRelated && hCurrentRelated.length>0){
+        showHanimeEndCard();
+      }
+    };
+    showRatingPopup(animeTitle,`Episode ${activeEpIdx+1}`,afterRating);
   });
   sync();
   setupSubtitles();
@@ -2205,6 +2289,133 @@ document.getElementById('mob-srch-input')?.addEventListener('input',e=>{
   clearTimeout(qt);
   qt=setTimeout(()=>mode==='h'?hLiveSrch(v):liveSrch(v),340);
 });
+
+// ── AI Chat ───────────────────────────────────────────────────────────────────
+const chatHistory = [];
+function toggleChat(){
+  const panel=document.getElementById('chat-panel');
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open')) document.getElementById('chat-in')?.focus();
+}
+async function sendChat(){
+  const inp=document.getElementById('chat-in');
+  const msg=(inp?.value||'').trim();
+  if(!msg) return;
+  inp.value='';
+  const msgs=document.getElementById('chat-msgs');
+  const addMsg=(text,cls)=>{
+    const el=document.createElement('div');
+    el.className=`cmsg ${cls}`;
+    el.textContent=text;
+    msgs.appendChild(el);
+    msgs.scrollTop=msgs.scrollHeight;
+    return el;
+  };
+  addMsg(msg,'u');
+  chatHistory.push({role:'user',content:msg});
+  const typing=addMsg('...','a typing');
+  try{
+    const r=await fetch(`${API_ORIGIN}/api/chat`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:msg,history:chatHistory.slice(-8)}),
+    });
+    const d=await r.json();
+    typing.textContent=d.reply||'Sorry, try again.';
+    typing.classList.remove('typing');
+    chatHistory.push({role:'assistant',content:d.reply||''});
+  }catch(e){
+    typing.textContent='Connection error. Try again.';
+    typing.classList.remove('typing');
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+document.getElementById('chat-in')?.addEventListener('keydown',e=>{ if(e.key==='Enter') sendChat(); });
+
+// ── Episode Rating ─────────────────────────────────────────────────────────────
+let _ratSel=0, _ratAfter=null;
+const _ratLabels=['','Poor 😐','Fair 🙂','Good 😊','Excellent! 🔥'];
+
+function showRatingPopup(anime,episode,afterFn){
+  const wrap=document.getElementById('player');
+  if(!wrap) return;
+  wrap.querySelectorAll('.rat-overlay').forEach(e=>e.remove());
+  _ratSel=0; _ratAfter=afterFn;
+  const ov=document.createElement('div');
+  ov.className='rat-overlay';
+  ov.innerHTML=`<div class="rat-card">
+    <div class="rat-label">Rate this episode</div>
+    <div class="rat-ep">${anime}</div>
+    <div class="rat-stars" id="rat-stars">
+      <span class="rat-star" data-v="1" onclick="pickStar(1)">⭐</span>
+      <span class="rat-star" data-v="2" onclick="pickStar(2)">⭐</span>
+      <span class="rat-star" data-v="3" onclick="pickStar(3)">⭐</span>
+      <span class="rat-star" data-v="4" onclick="pickStar(4)">⭐</span>
+    </div>
+    <div class="rat-note" id="rat-note">Tap a star</div>
+    <div class="rat-btns">
+      <button class="rat-btn" onclick="dismissRating()">Skip</button>
+      <button class="rat-btn primary" id="rat-submit" onclick="submitRating()" disabled>Send ⭐</button>
+    </div>
+  </div>`;
+  wrap.appendChild(ov);
+}
+function pickStar(n){
+  _ratSel=n;
+  document.querySelectorAll('.rat-star').forEach((s,i)=>s.classList.toggle('on',i<n));
+  const note=document.getElementById('rat-note');
+  if(note) note.textContent=_ratLabels[n]||'';
+  const btn=document.getElementById('rat-submit');
+  if(btn){ btn.disabled=false; btn.textContent=`Send ${'⭐'.repeat(n)}`; }
+}
+async function submitRating(){
+  if(!_ratSel) return;
+  const anime=document.getElementById('watch-title')?.textContent||'Unknown';
+  document.querySelector('.rat-overlay')?.remove();
+  try{
+    await fetch(`${API_ORIGIN}/api/rate`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({rating:_ratSel,anime,episode:`Ep ${activeEpIdx+1}`}),
+    });
+    toast(`Rating sent ${'⭐'.repeat(_ratSel)}`,true);
+  }catch(_){}
+  const fn=_ratAfter; _ratAfter=null; if(fn) fn();
+}
+function dismissRating(){
+  document.querySelector('.rat-overlay')?.remove();
+  const fn=_ratAfter; _ratAfter=null; if(fn) fn();
+}
+
+// ── Top 10 ────────────────────────────────────────────────────────────────────
+async function loadTop10(){
+  stopCurrentVideo();
+  showPage('home');
+  document.querySelectorAll('.nbtns button').forEach(b=>b.classList.remove('on'));
+  document.getElementById(mode==='h'?'nb-htop10':'nb-top10')?.classList.add('on');
+  const c=document.getElementById('home-content');
+  c.innerHTML=`<div class="sec-hd"><h2>🏆 Top 10 ${mode==='h'?'18+':'Anime'}</h2></div><div id="t10-list">${spin()}</div>`;
+  try{
+    const d=mode==='h'
+      ? await api('/api/hanime/trending?page=0&per_page=10')
+      : await api('/api/popular?page=1');
+    const items=(d.data||[]).slice(0,10);
+    document.getElementById('t10-list').innerHTML=items.map((item,i)=>{
+      const n=i+1;
+      const rc=n===1?'g':n===2?'s':n===3?'b':'';
+      const img=mode==='h'?hImg(item.poster||item.cover||''):(item.poster||'');
+      const meta=mode==='h'
+        ?[item.duration?fmtDur(item.duration):null,item.views?fmtViews(item.views)+' views':null].filter(Boolean).join(' · ')
+        :[item.type,item.score?'Score '+item.score:null].filter(Boolean).join(' · ');
+      const safe=(item.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const click=mode==='h'?`hOpenModal('${safe}')`:`openModal('${safe}')`;
+      return `<div class="t10-item" onclick="${click}">
+        <div class="t10-rank ${rc}">${n}</div>
+        <img class="t10-img" src="${img}" loading="lazy" onerror="this.style.opacity=0"/>
+        <div><div class="t10-title">${item.title||''}</div><div class="t10-meta">${meta}</div></div>
+      </div>`;
+    }).join('');
+  }catch(e){ document.getElementById('t10-list').innerHTML=`<div class="empty">${e.message}</div>`; }
+}
 
 // ── Auto-next episode ─────────────────────────────────────────────────────────
 let _autoNextTimer = null;
