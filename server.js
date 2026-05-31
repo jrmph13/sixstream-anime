@@ -640,12 +640,22 @@ app.get("/api/hls-download", wrap(async (req, res) => {
     return res.status(404).json({ success: false, message: "No segments found in playlist." });
   }
 
+  // Watermark filter — platform-aware font path
+  const wmFont = process.platform === "win32"
+    ? "C\\:/Windows/Fonts/arialbd.ttf"
+    : "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
+  const wmFilter = `drawtext=fontfile='${wmFont}':text='6stream':x=w-tw-18:y=18:fontsize=max(20\\,h*0.045):fontcolor=white@0.60:shadowcolor=black@0.82:shadowx=2:shadowy=2`;
+
   // Spawn ffmpeg — reads concatenated TS from stdin, writes fragmented MP4 to stdout
   const ff = spawn(ffmpegPath, [
     "-hide_banner", "-loglevel", "error",
     "-f", "mpegts", "-i", "pipe:0",
     "-map", "0:v:0?", "-map", "0:a:0?",
-    "-c", "copy",
+    "-vf", wmFilter,
+    "-c:v", "libx264",
+    "-preset", "veryfast",
+    "-crf", "23",
+    "-c:a", "copy",
     "-bsf:a", "aac_adtstoasc",
     "-movflags", "frag_keyframe+empty_moov",
     "-f", "mp4", "pipe:1",
@@ -833,7 +843,9 @@ app.get("/api/hanime/pixeldrain/:id/watermarked", wrap(async (req, res) => {
 
   const id = req.params.id;
   const upstream = `https://pixeldrain.com/api/filesystem/${encodeURIComponent(id)}`;
-  const font = "C\\:/Windows/Fonts/arialbd.ttf";
+  const font = process.platform === "win32"
+    ? "C\\:/Windows/Fonts/arialbd.ttf"
+    : "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
   const watermark = `drawtext=fontfile='${font}':text='6stream':x=w-tw-24:y=24:fontsize=max(28\\,h*0.055):fontcolor=white@0.62:shadowcolor=black@0.85:shadowx=3:shadowy=3`;
   const rawName = String(req.query.name || id)
     .replace(/<[^>]*>/g, "")
