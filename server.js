@@ -103,7 +103,31 @@ if (require.main === module) {
   setInterval(refreshAllowedOrigins, 5 * 60 * 1000).unref();
 }
 
+// Shared Groq helper (used by web chat and Telegram bot)
+async function groqChat(message, history = []) {
+  const r = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      {
+        role: "system",
+        content: "You are an anime expert AI assistant for 6stream. Help users find anime to watch, give recommendations, explain plots and characters. Be friendly and enthusiastic. Keep replies under 180 words. Use emojis.",
+      },
+      ...history.slice(-8),
+      { role: "user", content: message },
+    ],
+    max_tokens: 300,
+    temperature: 0.7,
+  }, {
+    headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
+    timeout: 30000,
+  });
+  return r.data.choices[0].message.content;
+}
+
 app.use((req, res, next) => {
+  // Telegram webhook bypasses CORS — Telegram sends no Origin header
+  if (req.path === "/api/tg-webhook") return next();
+
   if (Date.now() - accessListFetchedAt > 5 * 60 * 1000) {
     refreshAllowedOrigins();
   }
@@ -972,40 +996,73 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
   imgRes.data.pipe(res);
 }));
 
-// ── AI Chat (Groq) ────────────────────────────────────────────────────────────
+// ── AI Chat (web) ─────────────────────────────────────────────────────────────
 app.post("/api/chat", wrap(async (req, res) => {
   const { message, history = [] } = req.body || {};
   if (!message) return res.status(400).json({ error: "message required" });
-  const r = await axios.post("https://api.groq.com/openai/v1/chat/completions", {
-    model: "llama-3.3-70b-versatile",
-    messages: [
-      {
-        role: "system",
-        content: "You are an anime expert AI assistant for 6stream. Help users find anime to watch, give recommendations, explain plots and characters, and answer anime questions. Be friendly and enthusiastic. Keep replies under 180 words. Use emojis occasionally.",
-      },
-      ...history.slice(-8),
-      { role: "user", content: message },
-    ],
-    max_tokens: 300,
-    temperature: 0.7,
-  }, {
-    headers: { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
-    timeout: 30000,
-  });
-  res.json({ success: true, reply: r.data.choices[0].message.content });
+  const reply = await groqChat(message, history);
+  res.json({ success: true, reply });
 }));
 
-// ── Send episode rating to Telegram ──────────────────────────────────────────
+// ── Send episode rating + feedback to Telegram ────────────────────────────────
 app.post("/api/rate", wrap(async (req, res) => {
-  const { rating, anime, episode } = req.body || {};
+  const { rating, anime, episode, feedback } = req.body || {};
   if (!rating) return res.status(400).json({ error: "rating required" });
   const stars = "⭐".repeat(Math.min(4, Math.max(1, parseInt(rating))));
-  const text = `${stars} <b>Episode Rated ${rating}/4</b>\n\n📺 <b>${anime || "Unknown"}</b>\n📑 ${episode || ""}`;
+  const text = [
+    `${stars} <b>Episode Rated ${rating}/4</b>`,
+    ``,
+    `📺 <b>${anime || "Unknown Anime"}</b>`,
+    `📑 ${episode || "Unknown Episode"}`,
+    feedback ? `\n💬 <i>${feedback}</i>` : "",
+  ].join("\n");
   await axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
     chat_id: TG_CHAT_ID, text, parse_mode: "HTML",
   }, { timeout: 10000 });
   res.json({ success: true });
 }));
+
+// ── Telegram Bot Webhook ──────────────────────────────────────────────────────
+app.post("/api/tg-webhook", async (req, res) => {
+  res.sendStatus(200);
+  try {
+    const msg = req.body?.message || req.body?.edited_message;
+    if (!msg?.text) return;
+    const userId = String(msg.from?.id || "");
+    const chatId = msg.chat.id;
+    const text   = msg.text.trim();
+    const isAdmin = userId === TG_CHAT_ID;
+
+    const send = (t) => axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      chat_id: chatId, text: t, parse_mode: "HTML",
+      disable_web_page_preview: true,
+    }, { timeout: 10000 }).catch(() => {});
+
+    if (!isAdmin) return send("🔒 This bot is private.");
+
+    if (text.startsWith("/start")) {
+      return send(`👋 <b>6stream Bot</b>\n\nYour personal anime assistant! I'll notify you when you rate episodes and answer anime questions.\n\n/help — see all commands`);
+    }
+    if (text.startsWith("/help")) {
+      return send(`📋 <b>Commands</b>\n\n/recommend — Anime recommendations\n/trending — What's hot right now\n/top10 — Top 10 list\n/search &lt;title&gt; — Info about an anime\n\nOr just type anything! 🎌`);
+    }
+    if (text.startsWith("/trending")) {
+      return send(`📈 <b>Trending</b>\n\nOpen <a href="https://sixstream.onrender.com">6stream</a> → Trending tab for the latest! 🍿`);
+    }
+    if (text.startsWith("/top10")) {
+      return send(`🏆 <b>Top 10</b>\n\nOpen <a href="https://sixstream.onrender.com">6stream</a> and tap <b>Top 10</b> in the nav!`);
+    }
+    if (text.startsWith("/search") || text.startsWith("/recommend")) {
+      const q = text.replace(/^\/(search|recommend)\s*/i, "").trim() || "best anime to watch";
+      return send(await groqChat(q, []));
+    }
+    if (text.startsWith("/")) {
+      return send("❓ Unknown command. Use /help.");
+    }
+    // Free-form message → AI
+    send(await groqChat(text, []));
+  } catch (_) {}
+});
 
 // ── Generic video download proxy (adds Referer so CDNs don't 403) ────────────
 app.get("/api/dl", wrap(async (req, res) => {
@@ -1210,6 +1267,12 @@ app.use((req, res) => {
 module.exports = app;
 
 if (require.main === module) {
+  // Register Telegram webhook
+  const webhookUrl = `https://sixstream.onrender.com/api/tg-webhook`;
+  axios.post(`https://api.telegram.org/bot${TG_TOKEN}/setWebhook`, { url: webhookUrl })
+    .then(() => console.log("[tg] webhook registered"))
+    .catch(e => console.warn("[tg] webhook registration failed:", e.message));
+
   const server = app.listen(PORT, () => {
     console.log(`\n6stream API  -> http://localhost:${PORT}/api`);
     console.log(`Hanime API   -> http://localhost:${PORT}/api/hanime\n`);

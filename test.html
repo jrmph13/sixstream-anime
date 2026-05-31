@@ -819,6 +819,7 @@ const loadStores = {};
 
 // Hanime watch state
 let hCurrentSources = [], hCurrentRelated = [];
+let currentAnimeTitle = '';
 
 // Frontend cache
 const cache = new Map();
@@ -1491,6 +1492,7 @@ async function openModal(slug){
     }
   }
   _modalEps=eps;
+  currentAnimeTitle = info.title || slug;
 
   const tags=[
     info.meta?.type    && `<span class="tag">${info.meta.type}</span>`,
@@ -1561,6 +1563,7 @@ async function hOpenModal(slug){
     const d=await api(`/api/hanime/meta/${encodeURIComponent(slug)}`);
     const v=d.data;
     _hModalData=v;
+    currentAnimeTitle = v.title || slug;
 
     const tags=(v.tags||[]).map(t=>`<span class="tag a">${t.text}</span>`).join('');
     const brands=(v.brands||[]).map(b=>`<span class="tag">${b.title}</span>`).join('');
@@ -1697,7 +1700,7 @@ async function selectServer(idx){
     const m3u8=playerD.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
     const pm=`${API}/hls?url=${encodeURIComponent(m3u8)}`;
     const ep=currentEps[activeEpIdx]||{};
-    const baseName=safeFileName(`${currentSlug||'anime'} episode ${ep.epNum||activeEpIdx+1}`);
+    const baseName=safeFileName(`${currentAnimeTitle||currentSlug||'anime'} episode ${ep.epNum||activeEpIdx+1}`);
     const downloadUrl=`${API}/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(baseName)}`;
     const ps=(playerD.subtitles||[]).map(s=>({...s,url:`${API}/hls?url=${encodeURIComponent(s.url)}`}));
     playHLS(pm, ps, playerD.intro, playerD.outro, badge);
@@ -2124,7 +2127,9 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
   v.addEventListener('play',showControls);
   v.addEventListener('ended',()=>{
     showControls();
-    const animeTitle=(document.getElementById('watch-title')?.textContent||'').split('\n')[0].trim()||'Anime';
+    const ep=currentEps[activeEpIdx]||{};
+    const animeTitle=currentAnimeTitle||currentSlug||'Anime';
+    const epLabel=ep.title?`${ep.title} (Ep ${ep.epNum||activeEpIdx+1})`:`Episode ${ep.epNum||activeEpIdx+1}`;
     const afterRating=()=>{
       if(currentEps && currentEps.length>0){
         const nextIdx=activeEpIdx+1;
@@ -2134,7 +2139,7 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
         showHanimeEndCard();
       }
     };
-    showRatingPopup(animeTitle,`Episode ${activeEpIdx+1}`,afterRating);
+    showRatingPopup(animeTitle, epLabel, afterRating);
   });
   sync();
   setupSubtitles();
@@ -2333,7 +2338,7 @@ async function sendChat(){
 document.getElementById('chat-in')?.addEventListener('keydown',e=>{ if(e.key==='Enter') sendChat(); });
 
 // ── Episode Rating ─────────────────────────────────────────────────────────────
-let _ratSel=0, _ratAfter=null;
+let _ratSel=0, _ratAfter=null, _ratAnime='', _ratEp='';
 const _ratLabels=['','Poor 😐','Fair 🙂','Good 😊','Excellent! 🔥'];
 
 function showRatingPopup(anime,episode,afterFn){
@@ -2341,21 +2346,28 @@ function showRatingPopup(anime,episode,afterFn){
   if(!wrap) return;
   wrap.querySelectorAll('.rat-overlay').forEach(e=>e.remove());
   _ratSel=0; _ratAfter=afterFn;
+  _ratAnime=anime; _ratEp=episode;
   const ov=document.createElement('div');
   ov.className='rat-overlay';
   ov.innerHTML=`<div class="rat-card">
     <div class="rat-label">Rate this episode</div>
     <div class="rat-ep">${anime}</div>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:12px;">${episode}</div>
     <div class="rat-stars" id="rat-stars">
-      <span class="rat-star" data-v="1" onclick="pickStar(1)">⭐</span>
-      <span class="rat-star" data-v="2" onclick="pickStar(2)">⭐</span>
-      <span class="rat-star" data-v="3" onclick="pickStar(3)">⭐</span>
-      <span class="rat-star" data-v="4" onclick="pickStar(4)">⭐</span>
+      <span class="rat-star" onclick="pickStar(1)">⭐</span>
+      <span class="rat-star" onclick="pickStar(2)">⭐</span>
+      <span class="rat-star" onclick="pickStar(3)">⭐</span>
+      <span class="rat-star" onclick="pickStar(4)">⭐</span>
     </div>
     <div class="rat-note" id="rat-note">Tap a star</div>
+    <textarea id="rat-feedback" placeholder="Write feedback (optional)..."
+      style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);
+             color:#fff;border-radius:8px;padding:8px 10px;font-size:.76rem;font-family:inherit;
+             outline:none;resize:none;margin-bottom:12px;box-sizing:border-box;"
+      rows="2"></textarea>
     <div class="rat-btns">
       <button class="rat-btn" onclick="dismissRating()">Skip</button>
-      <button class="rat-btn primary" id="rat-submit" onclick="submitRating()" disabled>Send ⭐</button>
+      <button class="rat-btn primary" id="rat-submit" onclick="submitRating()" disabled>Send</button>
     </div>
   </div>`;
   wrap.appendChild(ov);
@@ -2370,12 +2382,12 @@ function pickStar(n){
 }
 async function submitRating(){
   if(!_ratSel) return;
-  const anime=document.getElementById('watch-title')?.textContent||'Unknown';
+  const feedback=(document.getElementById('rat-feedback')?.value||'').trim();
   document.querySelector('.rat-overlay')?.remove();
   try{
     await fetch(`${API_ORIGIN}/api/rate`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({rating:_ratSel,anime,episode:`Ep ${activeEpIdx+1}`}),
+      body:JSON.stringify({rating:_ratSel,anime:_ratAnime,episode:_ratEp,feedback}),
     });
     toast(`Rating sent ${'⭐'.repeat(_ratSel)}`,true);
   }catch(_){}
