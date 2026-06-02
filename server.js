@@ -2,7 +2,6 @@ const express = require("express");
 const axios = require("axios");
 const { spawn } = require("child_process");
 const ffmpegPath = require("ffmpeg-static");
-const FormData = require("form-data");
 const {
   getHome,
   getLatestUpdated,
@@ -1123,125 +1122,55 @@ async function tgSendPhoto(chatId, photo, caption, reply_markup) {
     ...(reply_markup ? { reply_markup } : {}),
   }).catch(() => tgSend(chatId, caption, reply_markup));
 }
-async function tgDownloadAndSend(chatId, sourceUrl, title, referer) {
-  if (!ffmpegPath) throw new Error("ffmpeg not available");
-  const hdrs = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Referer": referer, "Origin": referer.replace(/\/$/, ""), "Accept": "*/*",
-  };
-  const isHLS = sourceUrl.includes(".m3u8");
-  const clean = title.replace(/[^\w\s\-]/g, "").trim().replace(/\s+/g, "_").slice(0, 60) || "video";
-
-  const ff = spawn(ffmpegPath, [
-    "-hide_banner", "-loglevel", "error",
-    "-f", isHLS ? "mpegts" : "mp4", "-i", "pipe:0",
-    "-map", "0:v:0?", "-map", "0:a:0?",
-    "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
-    "-movflags", "frag_keyframe+empty_moov",
-    "-f", "mp4", "pipe:1",
-  ], { windowsHide: true });
-  ff.stdin.on("error", () => {});
-
-  (async () => {
-    try {
-      if (isHLS) {
-        const r0 = await axios.get(sourceUrl, { responseType: "text", timeout: 15000, headers: hdrs });
-        const body = String(r0.data);
-        const base = sourceUrl.substring(0, sourceUrl.lastIndexOf("/") + 1);
-        let lines = body.split(/\r?\n/);
-        let segments;
-        if (body.includes("EXT-X-STREAM-INF")) {
-          const varLine = lines.find(l => l.trim() && !l.startsWith("#"));
-          if (!varLine) throw new Error("No variant stream");
-          const varUrl = varLine.trim().startsWith("http") ? varLine.trim() : base + varLine.trim();
-          const vBase = varUrl.substring(0, varUrl.lastIndexOf("/") + 1);
-          const vr = await axios.get(varUrl, { responseType: "text", timeout: 15000, headers: hdrs });
-          lines = String(vr.data).split(/\r?\n/);
-          segments = lines.filter(l => l.trim() && !l.startsWith("#"))
-            .map(l => l.trim().startsWith("http") ? l.trim() : vBase + l.trim());
-        } else {
-          segments = lines.filter(l => l.trim() && !l.startsWith("#"))
-            .map(l => l.trim().startsWith("http") ? l.trim() : base + l.trim());
-        }
-        for (const seg of segments) {
-          if (ff.killed) break;
-          const rs = await axios.get(seg, { responseType: "stream", timeout: 30000, headers: hdrs, validateStatus: s => s < 400 });
-          await new Promise((res, rej) => { rs.data.on("end", res); rs.data.on("error", rej); rs.data.pipe(ff.stdin, { end: false }); });
-        }
-      } else {
-        const r0 = await axios.get(sourceUrl, { responseType: "stream", timeout: 30000, headers: hdrs });
-        r0.data.pipe(ff.stdin, { end: false });
-        await new Promise((res, rej) => { r0.data.on("end", res); r0.data.on("error", rej); });
-      }
-    } catch (e) { console.error("[tg-video] feed error:", e.message); }
-    try { ff.stdin.end(); } catch (_) {}
-  })();
-
-  const form = new FormData();
-  form.append("chat_id", String(chatId));
-  form.append("caption", title.slice(0, 1024));
-  form.append("supports_streaming", "true");
-  form.append("video", ff.stdout, { filename: `${clean}.mp4`, contentType: "video/mp4" });
-
-  return axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendVideo`, form, {
-    headers: form.getHeaders(),
-    timeout: 10 * 60 * 1000,
-    maxContentLength: Infinity,
-    maxBodyLength: Infinity,
-  });
-}
-
 async function streamEp(chatId, slug, epNum) {
   try {
     const info   = await getAnimeInfo(slug);
     const eps    = await getEpisodes(info.numericId);
     const ep     = eps.find(e => String(e.epNum) === String(epNum)) || eps[parseInt(epNum) - 1];
     if (!ep) return tgSend(chatId, `❌ Episode ${escMd(String(epNum))} not found\\.`);
+
     const svList = await getServers(ep.serverKey);
-    const sv     = svList.find(s => s.type === "sub") || svList[0];
+    const subSvs = svList.filter(s => s.type === "sub");
+    const dubSvs = svList.filter(s => s.type === "dub");
+    const sv     = subSvs[0] || svList[0];
     if (!sv) return tgSend(chatId, "❌ No server found\\.");
+
     const srcData = await getVideoSource(sv.linkId);
     const player  = await getPlayerSources(srcData.url);
     const m3u8    = player.sources?.[0]?.url;
     if (!m3u8) return tgSend(chatId, "❌ No stream URL found\\.");
 
-    const subInfo = player.subtitles?.length
-      ? `\n📝 Subs: ${escMd(player.subtitles.map(s => s.label).join(", "))}` : "";
-    const introInfo = player.intro
-      ? `\n⏩ Intro: ${escMd(String(player.intro.start))}s–${escMd(String(player.intro.end))}s` : "";
+    const proxied = `https://sixstream.onrender.com/api/hls?url=${encodeURIComponent(m3u8)}`;
+    const dlUrl   = `https://sixstream.onrender.com/api/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(`${info.title} Ep ${epNum}`)}`;
 
-    await tgSend(chatId,
-      `📥 *${escMd(info.title)}* \\- Ep *${escMd(String(epNum))}*\n🖥️ Server: ${escMd(sv.name)}${introInfo}${subInfo}\n\n⏳ Downloading\\.\\.\\. please wait`
-    );
+    const lines = [
+      `▶️ *${escMd(info.title)}*`,
+      `📺 Episode *${escMd(String(epNum))}*${ep.title && ep.title !== `Episode ${epNum}` ? ` — ${escMd(ep.title)}` : ""}`,
+      `🖥️ Server: ${escMd(sv.name)} \\(${escMd(sv.type)}\\)`,
+      `📡 Available: ${escMd(String(subSvs.length))} sub${dubSvs.length ? `, ${escMd(String(dubSvs.length))} dub` : ""} server${svList.length > 1 ? "s" : ""}`,
+    ];
+    if (player.intro)  lines.push(`⏩ Skip intro: ${escMd(String(player.intro.start))}s – ${escMd(String(player.intro.end))}s`);
+    if (player.outro)  lines.push(`⏭️ Skip outro: ${escMd(String(player.outro.start))}s – ${escMd(String(player.outro.end))}s`);
+    if (player.subtitles?.length) lines.push(`📝 Subtitles: ${escMd(player.subtitles.map(s => s.label).join(", "))}`);
+    lines.push(`\n🔗 Stream \\(paste in VLC / any player\\):\n\`${escMd(proxied)}\``);
 
-    const ref = refererFor(m3u8);
-    await tgDownloadAndSend(chatId, m3u8, `${info.title} Ep ${epNum}`, ref);
-  } catch (e) {
-    const msg = e.response?.data?.description || e.message || "unknown error";
-    if (msg.includes("file is too big") || msg.includes("Request Entity Too Large")) {
-      const info2 = await getAnimeInfo(slug).catch(() => ({ title: slug }));
-      const eps2  = await getEpisodes(info2.numericId).catch(() => []);
-      const ep2   = eps2.find(e => String(e.epNum) === String(epNum)) || eps2[parseInt(epNum) - 1];
-      const svList2 = ep2 ? await getServers(ep2.serverKey).catch(() => []) : [];
-      const sv2 = svList2.find(s => s.type === "sub") || svList2[0];
-      if (sv2) {
-        const srcData2 = await getVideoSource(sv2.linkId).catch(() => null);
-        const player2  = srcData2 ? await getPlayerSources(srcData2.url).catch(() => null) : null;
-        const m3u8b    = player2?.sources?.[0]?.url;
-        if (m3u8b) {
-          const proxied = `https://sixstream.onrender.com/api/hls?url=${encodeURIComponent(m3u8b)}`;
-          const dlUrl   = `https://sixstream.onrender.com/api/hls-download?url=${encodeURIComponent(m3u8b)}&name=${encodeURIComponent(`${info2.title} Ep ${epNum}`)}`;
-          return tgSend(chatId,
-            `⚠️ File too large for Telegram \\(\\>50MB\\)\\.\n\n📡 Stream URL:\n\`${escMd(proxied)}\``,
-            { inline_keyboard: [[
-              { text: "⬇️ Download MP4", url: dlUrl },
-              { text: "🌐 Open Web", url: `https://sixstream.onrender.com/watch/${slug}` },
-            ]]}
-          );
-        }
-      }
+    const kb = { inline_keyboard: [[
+      { text: "⬇️ Download MP4", url: dlUrl },
+      { text: "🌐 Open Web",     url: `https://sixstream.onrender.com/watch/${slug}` },
+    ]]};
+
+    if (info.poster) {
+      return tgSendPhoto(chatId, info.poster,
+        `▶️ *${escMd(info.title)}* — Ep *${escMd(String(epNum))}*\n🖥️ ${escMd(sv.name)}`,
+        { inline_keyboard: [[
+          { text: "⬇️ Download MP4", url: dlUrl },
+          { text: "🌐 Open Web",     url: `https://sixstream.onrender.com/watch/${slug}` },
+        ]]}
+      ).then(() => tgSend(chatId, lines.join("\n"), kb));
     }
-    return tgSend(chatId, `❌ Error: ${escMd(msg)}`);
+    return tgSend(chatId, lines.join("\n"), kb);
+  } catch (e) {
+    return tgSend(chatId, `❌ Error: ${escMd(e.message)}`);
   }
 }
 
@@ -1316,7 +1245,7 @@ app.post("/api/tg-webhook", async (req, res) => {
           (desc ? `\n${escMd(desc)}${vid.description?.length > 250 ? "\\.\\.\\." : ""}\n` : "") +
           `\n🏷️ ${escMd((vid.tags || []).map(t => t.text).slice(0, 8).join(", ") || "N/A")}\n` +
           `👁️ ${escMd(String(vid.views || 0))} views  👍 ${escMd(String(vid.likes || 0))}`;
-        const kb = { inline_keyboard: [[{ text: "📥 Send to Telegram", callback_data: `hs|${slug}` }]]};
+        const kb = { inline_keyboard: [[{ text: "▶️ Stream Sources", callback_data: `hs|${slug}` }]]};
         if (vid.poster) return tgSendPhoto(chatId, vid.poster, cap, kb);
         return tgSend(chatId, cap, kb);
       }
@@ -1325,23 +1254,18 @@ app.post("/api/tg-webhook", async (req, res) => {
         const slug = parts[0];
         const vid  = await getVideoInfo(slug).catch(() => null);
         if (!vid?.sources?.length) return tgSend(chatId, "❌ No sources found\\.");
-        const src = vid.sources[0];
-        await tgSend(chatId,
-          `📥 *${escMd(vid.title)}*\n🎞️ Quality: ${escMd(src.quality)} \\(${escMd(src.kind)}\\)\n\n⏳ Downloading\\.\\.\\. please wait`
-        );
-        try {
-          const ref = src.url.includes("hanime") || src.url.includes("highwinds") ? "https://hanime.tv/" : refererFor(src.url);
-          await tgDownloadAndSend(chatId, src.url, vid.title, ref);
-        } catch (e) {
-          const msg = e.response?.data?.description || e.message || "unknown error";
-          if (msg.includes("file is too big") || msg.includes("Request Entity Too Large")) {
-            return tgSend(chatId,
-              `⚠️ File too large for Telegram \\(\\>50MB\\)\\.\n\n📡 Stream URL:\n\`${escMd(src.url)}\``
-            );
-          }
-          return tgSend(chatId, `❌ Error: ${escMd(msg)}`);
-        }
-        return;
+        const best = vid.sources[0];
+        const lines = [
+          `▶️ *${escMd(vid.title)}*`,
+          `🎞️ *${escMd(String(vid.sources.length))} source${vid.sources.length > 1 ? "s" : ""} available:*`,
+          ...vid.sources.slice(0, 5).map(s =>
+            `• *${escMd(s.quality)}* \\(${escMd(s.kind)}\\) — \`${escMd(s.url)}\``
+          ),
+        ];
+        const dlUrl = `https://sixstream.onrender.com/api/hls-download?url=${encodeURIComponent(best.url)}&name=${encodeURIComponent(vid.title)}`;
+        return tgSend(chatId, lines.join("\n"), { inline_keyboard: [[
+          { text: `⬇️ Download Best (${best.quality})`, url: dlUrl },
+        ]]});
       }
 
       if (type === "ht") {
