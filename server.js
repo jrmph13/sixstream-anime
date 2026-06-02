@@ -187,6 +187,79 @@ app.get("/", (req, res) => {
 });
 
 const wrap = (fn) => (req, res, next) => fn(req, res, next).catch(next);
+
+const APP_TXT_URL = "https://raw.githubusercontent.com/jrmph13/sixstream/refs/heads/main/app.txt";
+
+app.get("/download", wrap(async (req, res) => {
+  let downloadUrl = "";
+  try {
+    const r = await axios.get(APP_TXT_URL, { responseType: "text", timeout: 8000 });
+    downloadUrl = String(r.data).trim();
+  } catch (_) {}
+
+  res.setHeader("Cache-Control", "no-store");
+  res.type("html").send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Download 6stream</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f0f13;font-family:system-ui,sans-serif;color:#e2e8f0;padding:24px;}
+
+/* splash / loader */
+#splash{position:fixed;inset:0;background:#0f0f13;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99;transition:opacity .5s ease;}
+#splash.hidden{opacity:0;pointer-events:none;}
+.splash-logo{width:180px;max-width:70vw;animation:pulse 1.6s ease-in-out infinite;}
+.splash-bar{width:180px;max-width:70vw;height:3px;background:#1e1e2a;border-radius:99px;margin-top:28px;overflow:hidden;}
+.splash-fill{height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:99px;animation:load 1.6s ease forwards;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+@keyframes load{0%{width:0}100%{width:100%}}
+
+/* main card */
+.card{background:#16161e;border:1px solid #2a2a3a;border-radius:24px;padding:40px 32px;max-width:400px;width:100%;text-align:center;box-shadow:0 8px 48px rgba(0,0,0,.6);opacity:0;transform:translateY(18px);transition:opacity .5s ease,transform .5s ease;}
+.card.show{opacity:1;transform:translateY(0);}
+.app-icon{width:90px;height:90px;border-radius:22px;margin:0 auto 20px;display:block;box-shadow:0 4px 24px rgba(124,58,237,.35);}
+.logo-img{width:160px;max-width:80%;margin:0 auto 8px;display:block;}
+.sub{font-size:.86rem;color:#94a3b8;margin-bottom:28px;line-height:1.65;}
+.btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;padding:14px 30px;border-radius:14px;font-size:1rem;font-weight:700;transition:opacity .18s,transform .15s;box-shadow:0 4px 20px rgba(124,58,237,.4);}
+.btn:hover{opacity:.88;transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn svg{width:21px;height:21px;fill:currentColor;flex-shrink:0;}
+${!downloadUrl ? ".btn{opacity:.38;pointer-events:none;}" : ""}
+.note{margin-top:16px;font-size:.72rem;color:#475569;}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="https://i.ibb.co/RG6vBJmR/logo.png" class="splash-logo" alt="6stream"/>
+  <div class="splash-bar"><div class="splash-fill"></div></div>
+</div>
+
+<div class="card" id="card">
+  <img src="https://i.ibb.co/KHyhz4J/app-icon.png" class="app-icon" alt="6stream icon"/>
+  <img src="https://i.ibb.co/RG6vBJmR/logo.png" class="logo-img" alt="6stream"/>
+  <p class="sub">Watch anime &amp; more &mdash; free, fast, no ads.<br/>Download the Android app below.</p>
+  <a class="btn" href="${downloadUrl || "#"}" ${downloadUrl ? 'download' : ''}>
+    <svg viewBox="0 0 24 24"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+    Download APK
+  </a>
+  <p class="note">${downloadUrl ? "Android APK &nbsp;&bull;&nbsp; Sideload to install" : "Download link unavailable right now."}</p>
+</div>
+
+<script>
+  setTimeout(function(){
+    var s=document.getElementById('splash');
+    var c=document.getElementById('card');
+    s.classList.add('hidden');
+    setTimeout(function(){ c.classList.add('show'); s.remove(); }, 500);
+  }, 1700);
+</script>
+</body>
+</html>`);
+}));
 const jsonCache = new Map();
 const cacheGet = (key) => {
   const hit = jsonCache.get(key);
