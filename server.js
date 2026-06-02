@@ -1083,13 +1083,6 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
   imgRes.data.pipe(res);
 }));
 
-// ── AI Chat (web) ─────────────────────────────────────────────────────────────
-app.post("/api/chat", wrap(async (req, res) => {
-  const { message, history = [] } = req.body || {};
-  if (!message) return res.status(400).json({ error: "message required" });
-  const reply = await groqChat(message, history);
-  res.json({ success: true, reply });
-}));
 
 // ── Send episode rating + feedback to Telegram ────────────────────────────────
 app.post("/api/rate", wrap(async (req, res) => {
@@ -1109,46 +1102,283 @@ app.post("/api/rate", wrap(async (req, res) => {
   res.json({ success: true });
 }));
 
+// ── Telegram helpers ──────────────────────────────────────────────────────────
+function escMd(t) {
+  return String(t ?? "").replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+}
+async function tgApi(method, body) {
+  return axios.post(`https://api.telegram.org/bot${TG_TOKEN}/${method}`, body, { timeout: 15000 });
+}
+async function tgSend(chatId, text, reply_markup) {
+  return tgApi("sendMessage", {
+    chat_id: chatId, text, parse_mode: "MarkdownV2",
+    disable_web_page_preview: true,
+    ...(reply_markup ? { reply_markup } : {}),
+  }).catch(e => console.warn("[tg] send:", e.response?.data?.description || e.message));
+}
+async function tgSendPhoto(chatId, photo, caption, reply_markup) {
+  return tgApi("sendPhoto", {
+    chat_id: chatId, photo, caption, parse_mode: "MarkdownV2",
+    ...(reply_markup ? { reply_markup } : {}),
+  }).catch(() => tgSend(chatId, caption, reply_markup));
+}
+async function streamEp(chatId, slug, epNum) {
+  try {
+    const info   = await getAnimeInfo(slug);
+    const eps    = await getEpisodes(info.numericId);
+    const ep     = eps.find(e => String(e.epNum) === String(epNum)) || eps[parseInt(epNum) - 1];
+    if (!ep) return tgSend(chatId, `❌ Episode ${escMd(String(epNum))} not found\\.`);
+    const svList = await getServers(ep.serverKey);
+    const sv     = svList.find(s => s.type === "sub") || svList[0];
+    if (!sv) return tgSend(chatId, "❌ No server found\\.");
+    const srcData = await getVideoSource(sv.linkId);
+    const player  = await getPlayerSources(srcData.url);
+    const m3u8    = player.sources?.[0]?.url;
+    if (!m3u8) return tgSend(chatId, "❌ No stream URL found\\.");
+    const proxied = `https://sixstream.onrender.com/api/hls?url=${encodeURIComponent(m3u8)}`;
+    const dlUrl   = `https://sixstream.onrender.com/api/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(`${info.title} Ep ${epNum}`)}`;
+    const lines   = [
+      `▶️ *${escMd(info.title)}* \\- Ep *${escMd(String(epNum))}*`,
+      `🖥️ *Server:* ${escMd(sv.name)}`,
+      `\n📡 *Stream \\(copy to player\\):*`,
+      `\`${escMd(proxied)}\``,
+    ];
+    if (player.intro)          lines.push(`⏩ Intro: ${escMd(String(player.intro.start))}s–${escMd(String(player.intro.end))}s`);
+    if (player.subtitles?.length) lines.push(`📝 Subs: ${escMd(player.subtitles.map(s => s.label).join(", "))}`);
+    return tgSend(chatId, lines.join("\n"), { inline_keyboard: [[
+      { text: "⬇️ Download MP4", url: dlUrl },
+      { text: "🌐 Open Web",     url: `https://sixstream.onrender.com/watch/${slug}` },
+    ]]});
+  } catch (e) {
+    return tgSend(chatId, `❌ Error: ${escMd(e.message)}`);
+  }
+}
+
 // ── Telegram Bot Webhook ──────────────────────────────────────────────────────
 app.post("/api/tg-webhook", async (req, res) => {
   res.sendStatus(200);
   try {
-    const msg = req.body?.message || req.body?.edited_message;
+    const update = req.body;
+
+    // ── Callback queries (inline button presses) ──────────────────────────────
+    if (update.callback_query) {
+      const cbq    = update.callback_query;
+      const userId = String(cbq.from?.id || "");
+      const chatId = cbq.message?.chat?.id;
+      await tgApi("answerCallbackQuery", { callback_query_id: cbq.id }).catch(() => {});
+      if (userId !== TG_CHAT_ID) return;
+
+      const [type, ...parts] = (cbq.data || "").split("|");
+      if (type === "noop") return;
+
+      if (type === "a") {
+        const slug = parts[0];
+        const info = await getAnimeInfo(slug).catch(() => null);
+        if (!info) return tgSend(chatId, "❌ Anime not found\\.");
+        const syn = info.synopsis?.slice(0, 280) || "No description\\.";
+        const cap = `🎬 *${escMd(info.title)}*\n` +
+          (info.titleJP ? `_${escMd(info.titleJP)}_\n` : "") +
+          `\n${escMd(syn)}${(info.synopsis?.length || 0) > 280 ? "\\.\\.\\." : ""}\n\n` +
+          `📺 *Status:* ${escMd(info.status || "Unknown")}\n` +
+          `🏷️ *Genres:* ${escMd((info.genres || []).slice(0, 5).join(", ") || "N/A")}`;
+        const kb = { inline_keyboard: [[
+          { text: "📋 Episodes", callback_data: `e|${slug}` },
+          { text: "🌐 Open Web",  url: `https://sixstream.onrender.com/watch/${slug}` },
+        ]]};
+        if (info.poster) return tgSendPhoto(chatId, info.poster, cap, kb);
+        return tgSend(chatId, cap, kb);
+      }
+
+      if (type === "e") {
+        const slug = parts[0];
+        const info = await getAnimeInfo(slug).catch(() => null);
+        if (!info?.numericId) return tgSend(chatId, "❌ Could not load episodes\\.");
+        const eps  = await getEpisodes(info.numericId).catch(() => []);
+        if (!eps.length) return tgSend(chatId, "❌ No episodes found\\.");
+        const shown = eps.slice(0, 50);
+        const rows  = [];
+        for (let i = 0; i < shown.length; i += 5) {
+          rows.push(shown.slice(i, i + 5).map(ep => ({
+            text: `Ep ${ep.epNum}`, callback_data: `w|${slug}|${ep.epNum}`,
+          })));
+        }
+        if (eps.length > 50) rows.push([{ text: `+${eps.length - 50} more — use /watch ${slug} <ep>`, callback_data: "noop" }]);
+        return tgSend(chatId,
+          `📋 *${escMd(info.title)}* — ${escMd(String(eps.length))} episodes\n\nSelect:`,
+          { inline_keyboard: rows }
+        );
+      }
+
+      if (type === "w") {
+        const [slug, epNum] = parts;
+        await tgSend(chatId, `⏳ Getting stream for Ep *${escMd(epNum)}*\\.\\.\\.`);
+        return streamEp(chatId, slug, epNum);
+      }
+
+      if (type === "hv") {
+        const slug = parts[0];
+        await tgSend(chatId, "⏳ Getting video info\\.\\.\\.");
+        const vid = await getVideoInfo(slug).catch(() => null);
+        if (!vid) return tgSend(chatId, "❌ Video not found\\.");
+        const desc = vid.description?.slice(0, 250) || "";
+        const cap  = `🔞 *${escMd(vid.title)}*\n` +
+          (desc ? `\n${escMd(desc)}${vid.description?.length > 250 ? "\\.\\.\\." : ""}\n` : "") +
+          `\n🏷️ ${escMd((vid.tags || []).map(t => t.text).slice(0, 8).join(", ") || "N/A")}\n` +
+          `👁️ ${escMd(String(vid.views || 0))} views  👍 ${escMd(String(vid.likes || 0))}`;
+        const kb = { inline_keyboard: [[{ text: "▶️ Stream URLs", callback_data: `hs|${slug}` }]]};
+        if (vid.poster) return tgSendPhoto(chatId, vid.poster, cap, kb);
+        return tgSend(chatId, cap, kb);
+      }
+
+      if (type === "hs") {
+        const slug = parts[0];
+        const vid  = await getVideoInfo(slug).catch(() => null);
+        if (!vid?.sources?.length) return tgSend(chatId, "❌ No sources found\\.");
+        const lines = vid.sources.slice(0, 5).map(s =>
+          `• *${escMd(s.quality)}* \\(${escMd(s.kind)}\\)\n\`${escMd(s.url)}\``
+        );
+        return tgSend(chatId, `▶️ *${escMd(vid.title)}*\n\n${lines.join("\n\n")}`);
+      }
+
+      if (type === "ht") {
+        const tag  = parts[0];
+        const data = await browse({ tags: [tag], page: 0, perPage: 10 }).catch(() => []);
+        if (!data.length) return tgSend(chatId, `❌ No videos for *${escMd(tag)}*\\.`);
+        const rows = data.map(v => ([{ text: v.title.slice(0, 40), callback_data: `hv|${v.slug}`.slice(0, 64) }]));
+        return tgSend(chatId, `🔞 *${escMd(tag)}*\n\nSelect video:`, { inline_keyboard: rows });
+      }
+
+      return;
+    }
+
+    // ── Regular messages ──────────────────────────────────────────────────────
+    const msg    = update.message || update.edited_message;
     if (!msg?.text) return;
     const userId = String(msg.from?.id || "");
     const chatId = msg.chat.id;
     const text   = msg.text.trim();
-    const isAdmin = userId === TG_CHAT_ID;
-
-    const send = (t) => axios.post(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
-      chat_id: chatId, text: t, parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }, { timeout: 10000 }).catch(() => {});
-
-    if (!isAdmin) return send("🔒 This bot is private.");
+    if (userId !== TG_CHAT_ID) return tgSend(chatId, "🔒 This bot is private\\.");
 
     if (text.startsWith("/start")) {
-      return send(`👋 <b>6stream Bot</b>\n\nYour personal anime assistant! I'll notify you when you rate episodes and answer anime questions.\n\n/help — see all commands`);
+      return tgSend(chatId,
+        `👋 *Welcome to 6stream Bot\\!*\n\nYour personal anime \\& 18\\+ assistant\\.\n\n/help — full command list`,
+        { inline_keyboard: [[
+          { text: "📱 Download App", url: "https://sixstream.onrender.com/download" },
+          { text: "🌐 Open 6stream",  url: "https://sixstream.onrender.com" },
+        ]]}
+      );
     }
+
     if (text.startsWith("/help")) {
-      return send(`📋 <b>Commands</b>\n\n/recommend — Anime recommendations\n/trending — What's hot right now\n/top10 — Top 10 list\n/search &lt;title&gt; — Info about an anime\n\nOr just type anything! 🎌`);
+      return tgSend(chatId,
+        `📋 *Commands*\n\n` +
+        `*🎬 Anime*\n` +
+        `/search \\<title\\> — search anime\n` +
+        `/trending — most viewed\n` +
+        `/new — latest anime\n` +
+        `/watch \\<slug\\> \\<ep\\> — stream episode\n\n` +
+        `*🔞 Hanime*\n` +
+        `/hentai — trending hanime\n` +
+        `/hentai \\<tag\\> — browse by tag\n` +
+        `/tags — top tags \\(tap to browse\\)\n\n` +
+        `*🤖 Other*\n` +
+        `/recommend \\<query\\> — AI anime picks\n` +
+        `/top10 — AI top 10 list\n` +
+        `/download — get app APK\n\n` +
+        `_Just type anything for AI chat\\!_ 🎌`
+      );
     }
-    if (text.startsWith("/trending")) {
-      return send(`📈 <b>Trending</b>\n\nOpen <a href="https://sixstream.onrender.com">6stream</a> → Trending tab for the latest! 🍿`);
+
+    if (text.startsWith("/search ")) {
+      const query = text.slice(8).trim();
+      if (!query) return tgSend(chatId, "Usage: `/search naruto`");
+      await tgSend(chatId, `🔍 Searching *${escMd(query)}*\\.\\.\\.`);
+      const results = await searchAnime(query).catch(() => []);
+      if (!results.length) return tgSend(chatId, "❌ No results found\\.");
+      const rows = results.slice(0, 8).map(r => ([{
+        text: `${r.title.slice(0, 33)}${r.type ? ` (${r.type})` : ""}`,
+        callback_data: `a|${r.slug}`,
+      }]));
+      return tgSend(chatId, `🔍 *Results for "${escMd(query)}"*\n\nSelect anime:`, { inline_keyboard: rows });
     }
+
+    if (text === "/trending") {
+      await tgSend(chatId, "⏳ Loading\\.\\.\\.");
+      const data = await getMostViewed(1).catch(() => []);
+      if (!data.length) return tgSend(chatId, "❌ Could not load trending\\.");
+      const rows = data.slice(0, 10).map(r => ([{ text: r.title.slice(0, 40), callback_data: `a|${r.slug}` }]));
+      return tgSend(chatId, "🔥 *Trending Anime*\n\nSelect:", { inline_keyboard: rows });
+    }
+
+    if (text === "/new") {
+      await tgSend(chatId, "⏳ Loading\\.\\.\\.");
+      const data = await getLatestUpdated(1).catch(() => []);
+      if (!data.length) return tgSend(chatId, "❌ Could not load latest\\.");
+      const rows = data.slice(0, 10).map(r => ([{ text: r.title.slice(0, 40), callback_data: `a|${r.slug}` }]));
+      return tgSend(chatId, "🆕 *Latest Anime*\n\nSelect:", { inline_keyboard: rows });
+    }
+
+    if (text.startsWith("/watch ")) {
+      const [, slug, epNum] = text.split(/\s+/);
+      if (!slug || !epNum) return tgSend(chatId, "Usage: `/watch one\\-piece 1050`");
+      await tgSend(chatId, `⏳ Getting stream for Ep *${escMd(epNum)}*\\.\\.\\.`);
+      return streamEp(chatId, slug, epNum);
+    }
+
+    if (text.startsWith("/hentai")) {
+      const tag  = text.slice(7).trim();
+      await tgSend(chatId, tag ? `🔍 Browsing *${escMd(tag)}*\\.\\.\\.` : "⏳ Loading\\.\\.\\.");
+      const data = tag
+        ? await browse({ tags: [tag], page: 0, perPage: 10 }).catch(() => [])
+        : await getTrending(0, 10).catch(() => []);
+      if (!data.length) return tgSend(chatId, tag ? `❌ No videos found\\. Check /tags for valid names\\.` : "❌ Could not load\\.");
+      const rows = data.map(v => ([{ text: v.title.slice(0, 40), callback_data: `hv|${v.slug}`.slice(0, 64) }]));
+      return tgSend(chatId,
+        tag ? `🔞 *${escMd(tag)}*\n\nSelect video:` : "🔥 *Trending Hanime*\n\nSelect:",
+        { inline_keyboard: rows }
+      );
+    }
+
+    if (text === "/tags") {
+      const tags = await getTags().catch(() => []);
+      if (!tags.length) return tgSend(chatId, "❌ Could not load tags\\.");
+      const rows = [];
+      const top  = tags.slice(0, 30);
+      for (let i = 0; i < top.length; i += 3) {
+        rows.push(top.slice(i, i + 3).map(t => ({
+          text: `${t.text} (${t.count})`,
+          callback_data: `ht|${t.text}`.slice(0, 64),
+        })));
+      }
+      return tgSend(chatId, "🏷️ *Top Tags* — tap to browse:", { inline_keyboard: rows });
+    }
+
+    if (text.startsWith("/download")) {
+      let dlUrl = "";
+      try { const r = await axios.get(APP_TXT_URL, { responseType: "text", timeout: 8000 }); dlUrl = String(r.data).trim(); } catch (_) {}
+      return tgSend(chatId, dlUrl
+        ? `📱 *6stream App*\n\n[⬇️ Tap to Download APK](${dlUrl})`
+        : `📱 *6stream App*\n\n❌ Link unavailable right now\\.`
+      );
+    }
+
+    if (text.startsWith("/recommend")) {
+      const q = text.replace(/^\/recommend\s*/i, "").trim() || "best anime to watch";
+      return tgSend(chatId, escMd(await groqChat(q, [])));
+    }
+
     if (text.startsWith("/top10")) {
-      return send(`🏆 <b>Top 10</b>\n\nOpen <a href="https://sixstream.onrender.com">6stream</a> and tap <b>Top 10</b> in the nav!`);
+      return tgSend(chatId, escMd(await groqChat("Give me a short top 10 best anime list with brief reasons", [])));
     }
-    if (text.startsWith("/search") || text.startsWith("/recommend")) {
-      const q = text.replace(/^\/(search|recommend)\s*/i, "").trim() || "best anime to watch";
-      return send(await groqChat(q, []));
-    }
-    if (text.startsWith("/")) {
-      return send("❓ Unknown command. Use /help.");
-    }
-    // Free-form message → AI
-    send(await groqChat(text, []));
-  } catch (_) {}
+
+    if (text.startsWith("/")) return tgSend(chatId, "❓ Unknown command\\. Use /help\\.");
+
+    // Free text → AI
+    return tgSend(chatId, escMd(await groqChat(text, [])));
+
+  } catch (err) {
+    console.error("[tg-webhook]", err.message);
+  }
 });
 
 // ── Generic video download proxy (adds Referer so CDNs don't 403) ────────────
