@@ -1260,8 +1260,11 @@ header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 22px
           <td>${usage ? usage.count : 0}</td>
           <td>${usage && usage.lastAccess ? new Date(usage.lastAccess).toLocaleString() : "—"}</td>
           <td>${usage ? usage.ips.length : 0} ${usage && usage.ips.length ? '('+usage.ips.slice(0,2).join(', ')+(usage.ips.length>2?', ...':'')+')' : ''}</td>
-          <td><button class="ban-btn" onclick="banKey('${hash}','Abuse')">Ban</button></td>
-        </tr>`;
+          <td>
+            <button class="ban-btn" onclick="banKey('${hash}','Abuse')">Ban</button>
+            <button class="del-btn" onclick="deleteKey('${hash}')" style="background:var(--muted);border:none;color:#fff;padding:2px 10px;border-radius:4px;cursor:pointer;font-size:.7rem;font-weight:700;margin-left:4px;">Del</button>
+          </td>
+        </tr>`; 
       }).join('')}
     </tbody>
   </table>` : `<div class="log-empty">No active keys yet. Generate one above.</div>`}
@@ -1340,6 +1343,16 @@ async function unbanKey(hash){
     else alert('Error: '+d.message);
   }catch(e){ alert('Request failed'); }
 }
+
+async function deleteKey(hash){
+  if(!confirm('Permanently delete this key? This cannot be undone.')) return;
+  try{
+    var r=await fetch('/api/admin/delete-key?apipass=${encodeURIComponent(API_PASS)}&hash='+hash);
+    var d=await r.json();
+    if(d.success) location.reload();
+    else alert('Error: '+d.message);
+  }catch(e){ alert('Request failed'); }
+}
 </script>
 </body>
 </html>`);
@@ -1378,6 +1391,18 @@ app.get("/api/admin/unban-key", wrap(async (req, res) => {
   const hash = req.query.hash;
   if (!hash) return res.status(400).json({ success: false, message: "hash required" });
   const result = admin.unbanKey(hash);
+  res.json(result);
+}));
+
+// API: Permanently delete a key by hash (admin only)
+app.get("/api/admin/delete-key", wrap(async (req, res) => {
+  const apiKey = admin.extractApiKey(req);
+  if (!apiKey || apiKey !== API_PASS) {
+    return res.status(401).json({ success: false, message: "Admin access required" });
+  }
+  const hash = req.query.hash;
+  if (!hash) return res.status(400).json({ success: false, message: "hash required" });
+  const result = admin.deleteKey(hash);
   res.json(result);
 }));
 

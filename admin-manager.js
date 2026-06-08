@@ -192,10 +192,10 @@ function unbanKey(keyHash) {
   return { success: false, message: "Key not found in ban list" };
 }
 
-// ── Delete/block a key ────────────────────────────────────────────────────────
+// ── Permanently delete a key ──────────────────────────────────────────────────
 function deleteKey(keyHash) {
   if (apiKeys[keyHash]) {
-    apiKeys[keyHash].blocked = true;
+    delete apiKeys[keyHash]; // Completely remove from stored keys
     saveKeys();
     return { success: true };
   }
