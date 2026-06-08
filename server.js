@@ -1236,7 +1236,11 @@ header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 22px
   <div class="result-box" id="resultBox">
     <div class="rb-hd">✅ New API Key Generated</div>
     <code id="generatedKey"></code>
-    <div class="rb-note">This key is encrypted. Give it to users instead of the master password. <strong>Copy it now — it won't be shown again!</strong></div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button onclick="copyKey()" style="flex:1;background:var(--acc);border:none;color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:700;font-size:.82rem;">📋 Copy</button>
+      <button onclick="closeResult()" style="background:var(--bg3);border:1px solid var(--bd);color:var(--txt);padding:8px 14px;border-radius:6px;cursor:pointer;font-weight:700;font-size:.82rem;">✕ Close</button>
+    </div>
+    <div class="rb-note" style="margin-top:8px;">This key is encrypted. Give it to users instead of the master password. <strong>Copy it now — it won't be shown again!</strong></div>
   </div>
 </div>
 
@@ -1319,9 +1323,32 @@ async function generateKey(){
     if(d.success){
       document.getElementById('generatedKey').textContent=d.key;
       document.getElementById('resultBox').classList.add('show');
-      setTimeout(function(){ location.reload(); }, 2000);
     } else { alert('Error: '+d.message); }
   }catch(e){ alert('Request failed'); }
+}
+
+function copyKey(){
+  var key=document.getElementById('generatedKey').textContent;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(key).then(function(){
+      var btn=document.querySelector('.result-box button');
+      btn.textContent='✅ Copied!';
+      setTimeout(function(){ btn.textContent='📋 Copy'; }, 2000);
+    });
+  } else {
+    var ta=document.createElement('textarea');
+    ta.value=key;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Copied!');
+  }
+}
+
+function closeResult(){
+  document.getElementById('resultBox').classList.remove('show');
+  location.reload();
 }
 
 async function banKey(hash,reason){
