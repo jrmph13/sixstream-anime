@@ -1258,7 +1258,7 @@ header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 22px
       ${Object.entries(data.keys).filter(([,k]) => !k.blocked).map(([hash, key]) => {
         const usage = data.keyUsage[hash];
         return `<tr>
-          <td class="key-label">${escapeHtml(key.label || "unnamed")}</td>
+          <td class="key-label" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;" onclick="viewSessions('${hash}')">${escapeHtml(key.label || "unnamed")}</td>
           <td class="key-preview">${escapeHtml(key.keyPrefix || hash.slice(0,8)+'...')}</td>
           <td>${key.created ? new Date(key.created).toLocaleDateString() : "—"}</td>
           <td>${usage ? usage.count : 0}</td>
@@ -1380,7 +1380,58 @@ async function deleteKey(hash){
     else alert('Error: '+d.message);
   }catch(e){ alert('Request failed'); }
 }
+
+async function viewSessions(hash){
+  var modal=document.getElementById('sessionModal');
+  var content=document.getElementById('sessionContent');
+  content.innerHTML='<div style="text-align:center;padding:20px;color:var(--muted);">Loading sessions...</div>';
+  modal.style.display='block';
+  try{
+    var r=await fetch('/api/admin/key-logs?apipass=${encodeURIComponent(API_PASS)}&hash='+hash);
+    var d=await r.json();
+    if(!d.success) throw new Error(d.message);
+    var html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+    html+='<div><strong style="color:var(--acc2);font-size:1rem;">'+escapeHtml(d.label)+'</strong>';
+    html+=' <span style="color:var(--muted);font-size:.8rem;">('+d.totalLogs+' requests)</span></div>';
+    html+='<button onclick="closeSession()" style="background:var(--bg3);border:1px solid var(--bd);color:var(--txt);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;">✕ Close</button></div>';
+    if(d.logs.length===0){
+      html+='<div style="text-align:center;padding:30px;color:var(--muted);">No sessions recorded yet.</div>';
+    } else {
+      html+='<div style="max-height:400px;overflow-y:auto;">';
+      for(var i=0;i<d.logs.length;i++){
+        var l=d.logs[i];
+        html+='<div style="padding:8px 0;border-bottom:1px solid var(--bg3);font-size:.78rem;">';
+        html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
+        html+='<span style="color:var(--muted);font-size:.68rem;white-space:nowrap;">'+new Date(l.time).toLocaleString()+'</span>';
+        html+='<span style="color:var(--txt);">'+escapeHtml(l.endpoint)+'</span>';
+        html+='<span style="color:var(--muted);font-family:monospace;font-size:.72rem;">'+escapeHtml(l.ip)+'</span>';
+        if(l.callingApp&&l.callingApp!=='direct'){
+          html+='<span style="color:var(--acc2);font-size:.68rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeHtml(l.callingApp)+'">📱 '+escapeHtml(l.callingApp.slice(0,40))+'</span>';
+        }
+        html+='<span style="font-size:.6rem;color:var(--muted);padding:1px 6px;border-radius:3px;background:var(--bg3);">'+escapeHtml(l.callerType||'browser')+'</span>';
+        html+='</div>';
+        html+='<div style="font-size:.65rem;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">'+escapeHtml((l.ua||'').slice(0,80))+'</div>';
+        html+='</div>';
+      }
+      html+='</div>';
+    }
+    content.innerHTML=html;
+  }catch(e){
+    content.innerHTML='<div style="text-align:center;padding:20px;color:var(--red);">Error: '+escapeHtml(e.message)+'</div>';
+  }
+}
+
+function closeSession(){
+  document.getElementById('sessionModal').style.display='none';
+}
 </script>
+
+<!-- Session Modal -->
+<div id="sessionModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:14px;max-width:700px;width:90%;max-height:80vh;overflow:hidden;padding:20px;box-shadow:0 8px 48px rgba(0,0,0,.6);">
+    <div id="sessionContent"></div>
+  </div>
+</div>
 </body>
 </html>`);
 });
@@ -1441,6 +1492,21 @@ app.get("/api/admin/stats", wrap(async (req, res) => {
   }
   const data = admin.getDashboardStats();
   res.json({ success: true, ...data });
+}));
+
+// API: Get all logs for a specific key hash (admin only)
+app.get("/api/admin/key-logs", wrap(async (req, res) => {
+  const apiKey = admin.extractApiKey(req);
+  if (!apiKey || apiKey !== API_PASS) {
+    return res.status(401).json({ success: false, message: "Admin access required" });
+  }
+  const hash = req.query.hash;
+  if (!hash) return res.status(400).json({ success: false, message: "hash required" });
+  const data = admin.getDashboardStats();
+  // Get all logs filtered by this hash
+  const keyLogs = data.recentLogs.filter(l => l.keyHash === hash);
+  const keyInfo = data.keys[hash];
+  res.json({ success: true, hash, label: keyInfo?.label || "unknown", totalLogs: keyLogs.length, logs: keyLogs });
 }));
 
 // ── Send episode rating + feedback to Telegram ────────────────────────────────
