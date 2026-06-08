@@ -17,6 +17,7 @@ const {
   getStatusAnime,
   getPlayerSources,
 } = require("./scraper");
+const admin = require("./admin-manager");
 
 let hanimeScraper;
 const hanime = () => {
@@ -133,7 +134,8 @@ app.use((req, res, next) => {
     refreshAllowedOrigins();
   }
 
-  const hasValidPass = req.query.apipass === API_PASS || req.headers['x-api-pass'] === API_PASS;
+  const apiKey = admin.extractApiKey(req);
+  const hasValidPass = apiKey ? admin.isValidKey(apiKey, API_PASS) : false;
   // sec-fetch-site is set automatically by browsers and cannot be forged by JS.
   // same-origin means the request came from our own page — no secret needed.
   const isSameOrigin = req.headers['sec-fetch-site'] === 'same-origin';
@@ -1083,6 +1085,311 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
   imgRes.data.pipe(res);
 }));
 
+
+// ── Admin: API Key Management & Dashboard ─────────────────────────────────────
+//
+// IMPORTANT: These routes use the master password `jrmphpogi ko13aila` for admin
+// access. Encrypted child keys (generated via the dashboard) do NOT grant admin
+// access — only the master admin password can access the dashboard.
+
+// Helper for dashboard template
+function escapeHtml(str) {
+  if (typeof str !== "string") str = String(str || "");
+  return str
+    .replace(new RegExp("[&]", "g"), "&" + "amp;")
+    .replace(new RegExp("[<]", "g"), "&" + "lt;")
+    .replace(new RegExp("[>]", "g"), "&" + "gt;")
+    .replace(new RegExp('["]', "g"), "&" + "quot;")
+    .replace(new RegExp("[']", "g"), "&#" + "39;");
+}
+
+// Middleware: check for banned keys on ALL /api routes
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api")) return next();
+  const apiKey = admin.extractApiKey(req);
+  if (apiKey && admin.isKeyBanned(apiKey)) {
+    return res.status(403).json({ message: "Access denied: API key has been banned", status: "banned" });
+  }
+  next();
+});
+
+// Middleware: track API usage for authenticated requests
+app.use((req, res, next) => {
+  if (!req.path.startsWith("/api")) return next();
+  // Only track after middleware has authenticated
+  const apiKey = admin.extractApiKey(req);
+  if (apiKey && admin.isValidKey(apiKey, API_PASS)) {
+    // Pass the master password so it can identify admin vs child key usage
+    admin.trackUsage(apiKey, req, API_PASS);
+  }
+  next();
+});
+
+// Admin Dashboard — hidden route
+// GET /route/pogi/si/jhames/admin/dashboard
+// Requires: ?apipass=jrmphpogi ko13aila (master password only, encrypted keys won't work)
+app.get("/route/pogi/si/jhames/admin/dashboard", (req, res) => {
+  const apiKey = admin.extractApiKey(req);
+  const isAdmin = apiKey === API_PASS;
+
+  if (!apiKey || !isAdmin) {
+    return res.status(401).json({ message: "Access denied. Master admin password required.", status: "unauthorized" });
+  }
+
+  const data = admin.getDashboardStats();
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>6stream — Admin Dashboard</title>
+<style>
+:root{--bg:#0f0f13;--bg2:#16161e;--bg3:#1e1e2a;--acc:#7c3aed;--acc2:#a855f7;--txt:#e2e8f0;--muted:#94a3b8;--bd:#2a2a3a;--green:#6ee7b7;--red:#f87171;--yellow:#fbbf24;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;font-size:14px;}
+code{font-family:'Consolas','Courier New',monospace;background:rgba(124,58,237,.12);padding:1px 5px;border-radius:3px;}
+input,select,button,textarea{font-family:inherit;font-size:inherit;}
+header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 22px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:99;}
+.logo{font-size:1.15rem;font-weight:900;color:var(--acc2);letter-spacing:.04em;}
+.logo span{color:var(--muted);font-weight:400;}
+.hd-nav{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.hd-nav a{color:var(--muted);text-decoration:none;font-size:.78rem;padding:4px 10px;border-radius:6px;border:1px solid var(--bd);transition:.12s;}
+.hd-nav a:hover{color:var(--txt);border-color:var(--acc2);}
+.container{max-width:1200px;margin:0 auto;padding:22px 16px;}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;}
+.card-hd{font-size:.6rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;}
+.card-val{font-size:1.45rem;font-weight:900;}
+.card-val.green{color:var(--green);}
+.card-val.purple{color:var(--acc2);}
+.card-val.yellow{color:var(--yellow);}
+.card-val.red{color:var(--red);}
+.section{margin-bottom:26px;}
+.section-title{font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--bd);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.section-title button{background:var(--acc);border:none;color:#fff;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:.7rem;}
+.section-title button:hover{opacity:.85;}
+.section-title .badge{font-size:.6rem;background:var(--bg3);padding:2px 8px;border-radius:99px;color:var(--muted);}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{text-align:left;font-size:.62rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--bd);white-space:nowrap;}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--bg3);font-size:.82rem;vertical-align:middle;}
+.tbl tr:hover td{background:rgba(124,58,237,.06);}
+.key-label{color:var(--acc2);font-weight:600;}
+.key-preview{font-family:monospace;color:var(--muted);font-size:.78rem;}
+.ban-btn{background:var(--red);border:none;color:#fff;padding:2px 10px;border-radius:4px;cursor:pointer;font-size:.7rem;font-weight:700;}
+.ban-btn:hover{opacity:.82;}
+.unban-btn{background:var(--green);color:#000;border:none;padding:2px 10px;border-radius:4px;cursor:pointer;font-size:.7rem;font-weight:700;}
+.unban-btn:hover{opacity:.82;}
+
+/* Generate form */
+.gen-box{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.gen-box label{font-size:.74rem;color:var(--muted);font-weight:700;}
+.gen-box input[type=text]{background:var(--bg3);border:1px solid var(--bd);color:var(--txt);padding:8px 12px;border-radius:6px;min-width:200px;flex:1;}
+.gen-box button{background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;color:#fff;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:700;font-size:.82rem;}
+.gen-box button:hover{opacity:.85;}
+.result-box{display:none;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:14px 18px;margin-top:10px;}
+.result-box.show{display:block;}
+.result-box .rb-hd{font-size:.68rem;font-weight:900;color:var(--green);margin-bottom:6px;}
+.result-box code{display:block;background:rgba(0,0,0,.35);padding:10px 14px;border-radius:6px;font-size:.88rem;word-break:break-all;margin-bottom:6px;color:var(--yellow);}
+.result-box .rb-note{font-size:.74rem;color:var(--muted);}
+
+/* Logs */
+.log-entry{font-size:.78rem;padding:5px 0;border-bottom:1px solid var(--bg3);display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.log-entry .le-time{color:var(--muted);font-size:.68rem;white-space:nowrap;}
+.log-entry .le-key{color:var(--acc2);font-family:monospace;font-size:.74rem;}
+.log-entry .le-ip{color:var(--muted);font-size:.72rem;font-family:monospace;}
+.log-entry .le-ep{color:var(--txt);font-size:.72rem;}
+.log-empty{color:var(--muted);font-size:.8rem;padding:14px 0;text-align:center;}
+
+/* Responsive */
+@media(max-width:768px){.grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:480px){.grid{grid-template-columns:1fr;}.gen-box{flex-direction:column;align-items:stretch;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">6<span>stream</span> <span>Admin</span></div>
+  <div class="hd-nav">
+    <a href="/jopay/jhames/api/doc/">API Docs</a>
+    <a href="/">Home</a>
+  </div>
+</header>
+<div class="container">
+
+<div class="grid">
+  <div class="card"><div class="card-hd">Active Keys</div><div class="card-val purple">${data.stats.totalKeys}</div></div>
+  <div class="card"><div class="card-hd">Banned Keys</div><div class="card-val red">${data.stats.totalBanned}</div></div>
+  <div class="card"><div class="card-hd">Total Requests</div><div class="card-val yellow">${data.stats.totalRequests}</div></div>
+  <div class="card"><div class="card-hd">Unique IPs</div><div class="card-val green">${data.stats.trackedIps}</div></div>
+</div>
+
+<div class="section">
+  <div class="section-title">Generate New API Key</div>
+  <div class="gen-box">
+    <label>Label:</label>
+    <input type="text" id="keyLabel" placeholder="e.g., my_app, friend_website, discord_bot" value=""/>
+    <button onclick="generateKey()">Generate Key</button>
+  </div>
+  <div class="result-box" id="resultBox">
+    <div class="rb-hd">✅ New API Key Generated</div>
+    <code id="generatedKey"></code>
+    <div class="rb-note">This key is encrypted. Give it to users instead of the master password. <strong>Copy it now — it won't be shown again!</strong></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">
+    Active API Keys
+    <span class="badge">${data.stats.totalKeys}</span>
+  </div>
+  ${Object.keys(data.keys).length ? `
+  <table class="tbl">
+    <thead><tr>
+      <th>Label</th><th>Key</th><th>Created</th><th>Requests</th><th>Last Access</th><th>IPs</th><th>Action</th>
+    </tr></thead>
+    <tbody>
+      ${Object.entries(data.keys).filter(([,k]) => !k.blocked).map(([hash, key]) => {
+        const usage = data.keyUsage[hash];
+        return `<tr>
+          <td class="key-label">${escapeHtml(key.label || "unnamed")}</td>
+          <td class="key-preview">${escapeHtml(key.keyPrefix || hash.slice(0,8)+'...')}</td>
+          <td>${key.created ? new Date(key.created).toLocaleDateString() : "—"}</td>
+          <td>${usage ? usage.count : 0}</td>
+          <td>${usage && usage.lastAccess ? new Date(usage.lastAccess).toLocaleString() : "—"}</td>
+          <td>${usage ? usage.ips.length : 0} ${usage && usage.ips.length ? '('+usage.ips.slice(0,2).join(', ')+(usage.ips.length>2?', ...':'')+')' : ''}</td>
+          <td><button class="ban-btn" onclick="banKey('${hash}','Abuse')">Ban</button></td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>` : `<div class="log-empty">No active keys yet. Generate one above.</div>`}
+</div>
+
+<div class="section">
+  <div class="section-title">
+    Banned Keys
+    <span class="badge">${data.stats.totalBanned}</span>
+  </div>
+  ${data.bannedKeys.length ? `
+  <table class="tbl">
+    <thead><tr><th>Key Hash</th><th>Reason</th><th>Banned At</th><th>Action</th></tr></thead>
+    <tbody>
+      ${data.bannedKeys.map(b => `<tr>
+        <td class="key-preview">${escapeHtml(b.keyHash)}</td>
+        <td>${escapeHtml(b.reason || "No reason")}</td>
+        <td>${b.bannedAt ? new Date(b.bannedAt).toLocaleDateString() : "—"}</td>
+        <td><button class="unban-btn" onclick="unbanKey('${b.keyHash}')">Unban</button></td>
+      </tr>`).join('')}
+    </tbody>
+  </table>` : `<div class="log-empty">No banned keys.</div>`}
+</div>
+
+<div class="section">
+  <div class="section-title">
+    Recent Usage
+    <span class="badge">${data.recentLogs.length}</span>
+  </div>
+  ${data.recentLogs.length ? data.recentLogs.map(l => `
+    <div class="log-entry">
+      <span class="le-time">${new Date(l.time).toLocaleString()}</span>
+      <span class="le-key">${escapeHtml(l.label)}${l.isAdmin ? ' 👑' : ''}</span>
+      <span class="le-ip">${escapeHtml(l.ip)}</span>
+      <span class="le-ep">${escapeHtml(l.endpoint)}</span>
+      <span style="font-size:.65rem;color:var(--acc2);overflow:hidden;text-overflow:ellipsis;max-width:180px;white-space:nowrap;" title="${escapeHtml(l.callingApp || '')}">📱 ${escapeHtml((l.callingApp || 'direct').slice(0,40))}</span>
+      <span style="font-size:.6rem;color:var(--muted);padding:1px 6px;border-radius:3px;background:var(--bg3);">${escapeHtml(l.callerType || 'browser')}</span>
+    </div>
+  `).join('') : `<div class="log-empty">No usage data yet.</div>`}
+</div>
+
+</div>
+
+<script>
+function escapeHtml(str){var d=document.createElement('div');d.appendChild(document.createTextNode(str));return d.innerHTML;}
+
+async function generateKey(){
+  var label=document.getElementById('keyLabel').value.trim()||'unnamed';
+  try{
+    var r=await fetch('/api/admin/generate-key?apipass=${encodeURIComponent(API_PASS)}&label='+encodeURIComponent(label));
+    var d=await r.json();
+    if(d.success){
+      document.getElementById('generatedKey').textContent=d.key;
+      document.getElementById('resultBox').classList.add('show');
+      setTimeout(function(){ location.reload(); }, 2000);
+    } else { alert('Error: '+d.message); }
+  }catch(e){ alert('Request failed'); }
+}
+
+async function banKey(hash,reason){
+  if(!confirm('Ban this key? All requests with this key will be blocked.')) return;
+  try{
+    var r=await fetch('/api/admin/ban-key?apipass=${encodeURIComponent(API_PASS)}&hash='+hash+'&reason='+encodeURIComponent(reason||'Abuse'));
+    var d=await r.json();
+    if(d.success) location.reload();
+    else alert('Error: '+d.message);
+  }catch(e){ alert('Request failed'); }
+}
+
+async function unbanKey(hash){
+  if(!confirm('Unban this key?')) return;
+  try{
+    var r=await fetch('/api/admin/unban-key?apipass=${encodeURIComponent(API_PASS)}&hash='+hash);
+    var d=await r.json();
+    if(d.success) location.reload();
+    else alert('Error: '+d.message);
+  }catch(e){ alert('Request failed'); }
+}
+</script>
+</body>
+</html>`);
+});
+
+// API: Generate new encrypted key (admin only)
+app.get("/api/admin/generate-key", wrap(async (req, res) => {
+  const apiKey = admin.extractApiKey(req);
+  if (!apiKey || apiKey !== API_PASS) {
+    return res.status(401).json({ success: false, message: "Admin access required" });
+  }
+  const label = (req.query.label || "unnamed").trim().slice(0, 40);
+  const result = admin.createApiKey(API_PASS, label);
+  res.json({ success: true, ...result });
+}));
+
+// API: Ban a key by hash (admin only)
+app.get("/api/admin/ban-key", wrap(async (req, res) => {
+  const apiKey = admin.extractApiKey(req);
+  if (!apiKey || apiKey !== API_PASS) {
+    return res.status(401).json({ success: false, message: "Admin access required" });
+  }
+  const hash = req.query.hash;
+  const reason = req.query.reason || "Banned by admin";
+  if (!hash) return res.status(400).json({ success: false, message: "hash required" });
+  const result = admin.banKey(hash, reason);
+  res.json(result);
+}));
+
+// API: Unban a key by hash (admin only)
+app.get("/api/admin/unban-key", wrap(async (req, res) => {
+  const apiKey = admin.extractApiKey(req);
+  if (!apiKey || apiKey !== API_PASS) {
+    return res.status(401).json({ success: false, message: "Admin access required" });
+  }
+  const hash = req.query.hash;
+  if (!hash) return res.status(400).json({ success: false, message: "hash required" });
+  const result = admin.unbanKey(hash);
+  res.json(result);
+}));
+
+// API: Dashboard data as JSON (admin only)
+app.get("/api/admin/stats", wrap(async (req, res) => {
+  const apiKey = admin.extractApiKey(req);
+  if (!apiKey || apiKey !== API_PASS) {
+    return res.status(401).json({ success: false, message: "Admin access required" });
+  }
+  const data = admin.getDashboardStats();
+  res.json({ success: true, ...data });
+}));
 
 // ── Send episode rating + feedback to Telegram ────────────────────────────────
 app.post("/api/rate", wrap(async (req, res) => {
