@@ -127,8 +127,9 @@ async function groqChat(message, history = []) {
 }
 
 app.use((req, res, next) => {
-  // Telegram webhook bypasses CORS — Telegram sends no Origin header
+  // Bypass auth for public routes
   if (req.path === "/api/tg-webhook") return next();
+  if (req.path === "/api/api/doc/documentation") return next();
 
   if (Date.now() - accessListFetchedAt > 5 * 60 * 1000) {
     refreshAllowedOrigins();
