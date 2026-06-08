@@ -1863,13 +1863,11 @@ app.get("/api/dl", wrap(async (req, res) => {
   r.data.pipe(res);
 }));
 
-// ── Public API Documentation ──────────────────────────────────────────────────
+// ── Public API Documentation (no API key required to view) ─────────────────────
 app.get("/api/api/doc/documentation", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  const authQ = `?apipass=your_api_key_here`;
-  const authH = `x-api-pass: your_api_key_here`;
-  const authB = `Authorization: Bearer your_api_key_here`;
+  const FB_LINK = "https://www.facebook.com/jhames.rhonnielle.martin";
   const BASE = `https://sixstream.onrender.com`;
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -1893,14 +1891,14 @@ header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 22px
 .hd-nav{margin-left:auto;display:flex;gap:8px;}
 .hd-nav a{color:var(--muted);text-decoration:none;font-size:.78rem;padding:4px 10px;border-radius:6px;border:1px solid var(--bd);}
 .hd-nav a:hover{color:var(--txt);border-color:var(--acc2);}
+.get-key-btn{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;padding:12px 28px;border-radius:10px;font-weight:700;font-size:.9rem;display:inline-block;transition:opacity .18s,transform .15s;box-shadow:0 4px 20px rgba(124,58,237,.4);}
+.get-key-btn:hover{opacity:.88;transform:translateY(-1px);}
 .container{max-width:960px;margin:0 auto;padding:22px 16px;}
 h1{font-size:1.5rem;margin-bottom:6px;}
 h2{font-size:1.15rem;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--bd);}
 h3{font-size:.95rem;margin:18px 0 8px;color:var(--acc2);}
-.hero{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(168,85,247,.05));border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:20px 22px;margin-bottom:20px;}
-.hero p{font-size:.88rem;color:var(--muted);margin-top:4px;}
-.auth-box{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
-.auth-box .ab-hd{font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;}
+.hero{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(168,85,247,.05));border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:24px 22px;margin-bottom:20px;text-align:center;}
+.hero p{font-size:.88rem;color:var(--muted);margin-top:6px;margin-bottom:16px;}
 .endpoint{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
 .endpoint .method{font-size:.6rem;font-weight:900;padding:2px 7px;border-radius:4px;background:rgba(16,185,129,.18);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);white-space:nowrap;flex-shrink:0;}
 .endpoint .path{font-family:monospace;font-size:.82rem;flex:1;color:var(--txt);min-width:0;}
@@ -1927,116 +1925,10 @@ footer{text-align:center;padding:20px;font-size:.72rem;color:var(--muted);border
 
 <div class="hero">
   <h1>6stream API Documentation</h1>
-  <p>Complete anime & 18+ scraper API. All routes return JSON. Replace <code>your_api_key_here</code> with your actual API key in all examples.</p>
+  <p>Complete anime & 18+ scraper API. All routes return JSON.</p>
+  <p style="font-size:.82rem;color:var(--muted);margin-top:0;margin-bottom:18px;">This documentation is public &mdash; no API key required to view. You'll need a key to call the endpoints.</p>
+  <a class="get-key-btn" href="${FB_LINK}" target="_blank">💬 Get API Key — Contact Me</a>
 </div>
-
-<h2>Authentication</h2>
-<p style="font-size:.85rem;color:var(--muted);margin-bottom:10px;">You can authenticate in <strong style="color:var(--txt)">3 ways</strong>. Choose whichever works for your setup.</p>
-
-<div class="auth-box">
-  <div class="ab-hd">Method 1 — Query Parameter (easiest)</div>
-  <pre>curl "${BASE}/api/home?apipass=your_api_key_here"</pre>
-</div>
-
-<div class="auth-box">
-  <div class="ab-hd">Method 2 — Header</div>
-  <pre>curl -H "${authH}" \\
-  "${BASE}/api/home"</pre>
-</div>
-
-<div class="auth-box">
-  <div class="ab-hd">Method 3 — Bearer Token (recommended for apps)</div>
-  <pre>curl -H "${authB}" \\
-  "${BASE}/api/home"</pre>
-</div>
-
-<div class="note">
-  <strong>Note:</strong> Get your API key from the admin dashboard. Replace <code>your_api_key_here</code> with your actual key in all examples.
-</div>
-
-<h2>Getting Started</h2>
-
-<h3>cURL Examples</h3>
-<pre>
-<span class="cmt"># Get featured anime</span>
-curl "${BASE}/api/home${authQ}"
-
-<span class="cmt"># Search for anime</span>
-curl "${BASE}/api/search?q=naruto${authQ}"
-
-<span class="cmt"># Stream an episode (one call = everything)</span>
-curl "${BASE}/api/play/one-piece/1${authQ}"</pre>
-
-<h3>JavaScript / React Native</h3>
-<pre>
-<span class="cmt">// Using fetch with Bearer token</span>
-const API = "${BASE}";
-const KEY = "<span class="str">your_api_key_here</span>";
-
-async function getAnime(slug) {
-  const res = await fetch(\`<span class="url">\${API}/api/anime/\${slug}</span>\`, {
-    headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> }
-  });
-  return res.json();
-}
-
-<span class="cmt">// Stream an episode</span>
-const stream = await fetch(
-  \`<span class="url">\${API}/api/play/one-piece/1</span>\`,
-  { headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> } }
-);</pre>
-
-<h3>React Native Video Player</h3>
-<pre>
-<span class="cmt">// Install: npm install react-native-video</span>
-import Video from <span class="str">'react-native-video'</span>;
-
-const API = "${BASE}";
-const KEY = "<span class="str">your_api_key_here</span>";
-
-async function getStream(slug, ep) {
-  const res = await fetch(
-    \`<span class="url">\${API}/api/play/\${slug}/\${ep}</span>\`,
-    { headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> } }
-  );
-  const data = await res.json();
-  <span class="cmt">// Use HLS proxy for CORS-free streaming</span>
-  return \`<span class="url">\${API}/api/hls?url=\${encodeURIComponent(data.sources[0].url)}</span>\`;
-}
-
-<span class="cmt">// In your component:</span>
-<Video source={\{ uri: streamUrl }} controls={true} resizeMode="contain" /></pre>
-
-<h3>Python</h3>
-<pre>
-<span class="kw">import</span> requests
-
-API = "${BASE}"
-KEY = "your_api_key_here"
-
-<span class="cmt"># Get home page</span>
-res = requests.get(f"<span class="url">{API}/api/home</span>",
-  headers={"Authorization": f"Bearer {KEY}"})
-data = res.json()
-
-<span class="cmt"># Stream episode</span>
-res = requests.get(f"<span class="url">{API}/api/play/one-piece/1</span>",
-  params={"apipass": KEY})
-stream = res.json()
-print(stream["sources"][0]["url"])</pre>
-
-<h3>Axios</h3>
-<pre>
-<span class="kw">import</span> axios from <span class="str">'axios'</span>;
-
-const api = axios.create({
-  baseURL: "<span class="url">${BASE}</span>",
-  headers: { <span class="str">"Authorization"</span>: <span class="str">"Bearer your_api_key_here"</span> }
-});
-
-<span class="cmt">// Usage</span>
-const { data } = await api.get("<span class="url">/api/home</span>");
-const { data: stream } = await api.get("<span class="url">/api/play/one-piece/1</span>");</pre>
 
 <h2>API Endpoints</h2>
 
@@ -2047,32 +1939,31 @@ const { data: stream } = await api.get("<span class="url">/api/play/one-piece/1<
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/popular?page=1</span><span class="desc">Most viewed anime</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/search?q=title</span><span class="desc">Search anime by title</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/genres</span><span class="desc">All genres list</span></div>
-<div class="endpoint"><span class="method">GET</span><span class="path">/api/genre/:genreId?page=1</span><span class="desc">Anime by genre (action, romance, etc)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/genre/:genreId?page=1</span><span class="desc">Anime by genre</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/type/:type?page=1</span><span class="desc">tv | movie | ova | ona | special | music</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/status/:status?page=1</span><span class="desc">currently-airing | finished-airing | not-yet-aired</span></div>
 
 <h3>Anime — Detail & Streaming</h3>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/anime/:slug</span><span class="desc">Get anime info + numericId</span></div>
-<div class="endpoint"><span class="method">GET</span><span class="path">/api/anime/:slug/episodes</span><span class="desc">Get episode list (each has serverKey)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/anime/:slug/episodes</span><span class="desc">Get episode list</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/servers?key=serverKey</span><span class="desc">Get server list for episode</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/source/:linkId</span><span class="desc">Get embed URL from linkId</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/player?url=embedUrl</span><span class="desc">Get real m3u8 + subtitles</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/stream/:linkId</span><span class="desc">embed URL + m3u8 + subtitles in one</span></div>
 <div class="endpoint" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.06);">
   <span class="method">GET</span><span class="path" style="color:var(--green);font-weight:600;">/api/play/:slug/:epNum?type=sub&server=0</span>
-  <span class="desc">⭐ <strong style="color:var(--green);">Full pipeline in ONE call</strong> — m3u8 + subtitles + skip times</span>
+  <span class="desc">⭐ <strong style="color:var(--green);">Full pipeline in ONE call</strong></span>
 </div>
 
 <h3>HLS Proxy & Download</h3>
-<div class="endpoint"><span class="method">GET</span><span class="path">/api/hls?url=m3u8_url</span><span class="desc">Proxy HLS stream (rewrites segments, no CORS)</span></div>
-<div class="endpoint"><span class="method">GET</span><span class="path">/api/hls-download?url=m3u8_url&name=title</span><span class="desc">Download as MP4 (ffmpeg on server)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hls?url=m3u8_url</span><span class="desc">Proxy HLS stream (no CORS)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hls-download?url=m3u8_url&name=title</span><span class="desc">Download as MP4</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/proxy?url=page_url</span><span class="desc">Embed player page with ad-blocker</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/img-proxy?url=image_url</span><span class="desc">Proxy hotlink-protected images</span></div>
 
 <h3>Hanime.tv <span class="tag han">18+</span></h3>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/trending?page=0&per_page=24</span><span class="desc">Trending videos</span></div>
-<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/new?page=0&per_page=24</span><span class="desc">Newest videos</span></div>
-<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/browse?tags=tag1,tag2&brands=brand1</span><span class="desc">Browse with filters</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/new</span><span class="desc">Newest videos</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/search?q=query</span><span class="desc">Search videos</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/tags</span><span class="desc">All tags</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/video/:slug</span><span class="desc">Video detail + clean stream URLs</span></div>
@@ -2087,69 +1978,82 @@ const { data: stream } = await api.get("<span class="url">/api/play/one-piece/1<
 <span class="cmt"># Step-by-step flow:</span>
 
 <span class="cmt"># 1. Get anime info</span>
-GET /api/anime/one-piece<span class="str">${authQ}</span>  →  numericId: 12
+GET /api/anime/one-piece  →  numericId: 12
 
 <span class="cmt"># 2. Get episodes</span>
-GET /api/anime/one-piece/episodes?id=12<span class="str">${authQ}</span>  →  serverKey: "abc123"
+GET /api/anime/one-piece/episodes?id=12  →  serverKey: "abc123"
 
 <span class="cmt"># 3. Get servers</span>
-GET /api/servers?key=abc123<span class="str">${authQ}</span>  →  linkId: "xyz789"
+GET /api/servers?key=abc123  →  linkId: "xyz789"
 
 <span class="cmt"># 4. Get embed URL</span>
-GET /api/source/xyz789<span class="str">${authQ}</span>  →  embedUrl: "https://..."
+GET /api/source/xyz789  →  embedUrl: "https://..."
 
 <span class="cmt"># 5. Get real m3u8</span>
-GET /api/player?url=embedUrl<span class="str">${authQ}</span>  →  m3u8 + subtitles
+GET /api/player?url=embedUrl  →  m3u8 + subtitles
 
 <span class="cmt"># ⭐ OR — one call does all 5 steps:</span>
-GET /api/play/one-piece/1<span class="str">${authQ}</span>
+GET /api/play/one-piece/1
 <span class="cmt"># Returns: { sources: [{url: "m3u8"}], subtitles: [...], intro: {...}, outro: {...} }</span></pre>
 
 <h2>Code Samples</h2>
+<p style="font-size:.82rem;color:var(--muted);margin-bottom:10px;">Replace <code>YOUR_API_KEY</code> with the key you received after contacting me.</p>
 
-<h3>Get Stream URL (JavaScript)</h3>
+<h3>cURL</h3>
 <pre>
-<span class="kw">async function</span> getStreamUrl(slug, episode) {
+<span class="cmt"># Get featured anime</span>
+curl "${BASE}/api/home?apipass=YOUR_API_KEY"
+
+<span class="cmt"># Search for anime</span>
+curl "${BASE}/api/search?q=naruto&apipass=YOUR_API_KEY"
+
+<span class="cmt"># Stream an episode</span>
+curl "${BASE}/api/play/one-piece/1?apipass=YOUR_API_KEY"</pre>
+
+<h3>JavaScript / React Native</h3>
+<pre>
+const API = "${BASE}";
+const KEY = "<span class="str">YOUR_API_KEY</span>";
+
+<span class="cmt">// Get home page</span>
+const res = await fetch(\`<span class="url">\${API}/api/home</span>\`, {
+  headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> }
+});
+
+<span class="cmt">// Stream episode</span>
+const stream = await fetch(
+  \`<span class="url">\${API}/api/play/one-piece/1</span>\`,
+  { headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> } }
+);</pre>
+
+<h3>Python</h3>
+<pre>
+<span class="kw">import</span> requests
+
+API = "${BASE}"
+KEY = "YOUR_API_KEY"
+
+res = requests.get(f"<span class="url">{API}/api/home</span>",
+  headers={"Authorization": f"Bearer {KEY}"})
+data = res.json()</pre>
+
+<h3>React Native Video</h3>
+<pre>
+import Video from <span class="str">'react-native-video'</span>;
+
+async function playEpisode(slug, ep) {
   const res = await fetch(
-    \`<span class="url">${BASE}/api/play/\${slug}/\${episode}</span>\`,
-    { headers: { <span class="str">"Authorization"</span>: <span class="str">"Bearer your_api_key_here"</span> } }
+    \`<span class="url">${BASE}/api/play/\${slug}/\${ep}</span>\`,
+    { headers: { <span class="str">"Authorization"</span>: <span class="str">"Bearer YOUR_API_KEY"</span> } }
   );
   const data = await res.json();
-  return {
-    m3u8: data.sources[0].url,
-    subtitles: data.subtitles,
-    intro: data.intro,
-    outro: data.outro
-  };
+  return \`<span class="url">${BASE}/api/hls?url=\${encodeURIComponent(data.sources[0].url)}</span>\`;
 }
-
-<span class="cmt">// Usage</span>
-const { m3u8 } = await getStreamUrl("one-piece", 1050);
-console.log(m3u8);</pre>
-
-<h3>Download Video (cURL)</h3>
-<pre>
-<span class="cmt"># Download as MP4</span>
-curl -o "one-piece-ep-1.mp4" \\
-  "${BASE}/api/play/one-piece/1${authQ}" \\
-  -H "Accept: application/json"
-
-<span class="cmt"># Or use HLS download endpoint</span>
-curl -o "one-piece.mp4" \\
-  "${BASE}/api/hls-download?url=PASTE_M3U8_URL_HERE&name=one-piece-ep-1${authQ}"</pre>
-
-<h3>Watch in VLC</h3>
-<pre>
-<span class="cmt"># First get the m3u8 URL from /api/play</span>
-curl "${BASE}/api/play/one-piece/1${authQ}" | jq -r '.sources[0].url'
-
-<span class="cmt"># Then paste the URL into VLC: Media → Open Network Stream</span>
-<span class="cmt"># Or use the HLS proxy (no CORS issues):</span>
-vlc "${BASE}/api/hls?url=PASTE_M3U8_URL_HERE${authQ}"</pre>
+<span class="cmt">// <Video source={{ uri: streamUrl }} controls /></span></pre>
 
 <h2>Admin Endpoints <span class="tag admin">admin</span></h2>
 <div class="note" style="border-left-color:var(--yellow);">
-  <strong>Admin access only.</strong> These require the master admin password. Get it from the project owner.
+  <strong>Admin access only.</strong> These require the master admin password.
 </div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/generate-key?label=myapp</span><span class="desc">Generate encrypted API key</span></div>
 <div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/ban-key?hash=xxx&reason=abuse</span><span class="desc">Ban a key</span></div>
@@ -2160,7 +2064,7 @@ vlc "${BASE}/api/hls?url=PASTE_M3U8_URL_HERE${authQ}"</pre>
 
 </div>
 <footer>
-  <strong>6stream API</strong> &mdash; Data scraped from public sources &nbsp;&middot;&nbsp; Built by Jhames Martin
+  <strong>6stream API</strong> &mdash; Built by Jhames Martin &nbsp;&middot;&nbsp; <a href="${FB_LINK}" style="color:var(--acc2);text-decoration:none;">Contact for API Key</a>
 </footer>
 </body>
 </html>`);
