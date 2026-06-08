@@ -1863,6 +1863,309 @@ app.get("/api/dl", wrap(async (req, res) => {
   r.data.pipe(res);
 }));
 
+// ── Public API Documentation ──────────────────────────────────────────────────
+app.get("/api/api/doc/documentation", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  const authQ = `?apipass=your_api_key_here`;
+  const authH = `x-api-pass: your_api_key_here`;
+  const authB = `Authorization: Bearer your_api_key_here`;
+  const BASE = `https://sixstream.onrender.com`;
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>6stream — API Documentation</title>
+<style>
+:root{--bg:#0f0f13;--bg2:#16161e;--bg3:#1e1e2a;--acc:#7c3aed;--acc2:#a855f7;--txt:#e2e8f0;--muted:#94a3b8;--bd:#2a2a3a;--green:#6ee7b7;--yellow:#fbbf24;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.6;}
+code{font-family:'Consolas','Courier New',monospace;background:rgba(124,58,237,.12);padding:1px 5px;border-radius:3px;font-size:.85em;}
+pre{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:.82rem;color:var(--green);margin:8px 0;}
+pre .cmt{color:var(--muted);}
+pre .kw{color:var(--acc2);}
+pre .str{color:var(--yellow);}
+pre .url{color:#7dd3fc;}
+header{background:var(--bg2);border-bottom:1px solid var(--bd);padding:14px 22px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:99;}
+.logo{font-size:1.15rem;font-weight:900;color:var(--acc2);}
+.logo span{color:var(--muted);font-weight:400;}
+.hd-nav{margin-left:auto;display:flex;gap:8px;}
+.hd-nav a{color:var(--muted);text-decoration:none;font-size:.78rem;padding:4px 10px;border-radius:6px;border:1px solid var(--bd);}
+.hd-nav a:hover{color:var(--txt);border-color:var(--acc2);}
+.container{max-width:960px;margin:0 auto;padding:22px 16px;}
+h1{font-size:1.5rem;margin-bottom:6px;}
+h2{font-size:1.15rem;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--bd);}
+h3{font-size:.95rem;margin:18px 0 8px;color:var(--acc2);}
+.hero{background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(168,85,247,.05));border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:20px 22px;margin-bottom:20px;}
+.hero p{font-size:.88rem;color:var(--muted);margin-top:4px;}
+.auth-box{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:16px 18px;margin-bottom:16px;}
+.auth-box .ab-hd{font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;}
+.endpoint{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-bottom:5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.endpoint .method{font-size:.6rem;font-weight:900;padding:2px 7px;border-radius:4px;background:rgba(16,185,129,.18);color:#6ee7b7;border:1px solid rgba(16,185,129,.35);white-space:nowrap;flex-shrink:0;}
+.endpoint .path{font-family:monospace;font-size:.82rem;flex:1;color:var(--txt);min-width:0;}
+.endpoint .desc{font-size:.72rem;color:var(--muted);}
+.tag{display:inline-block;font-size:.6rem;padding:1px 7px;border-radius:4px;margin:0 3px;}
+.tag.get{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);}
+.tag.admin{background:rgba(251,191,36,.15);color:var(--yellow);border:1px solid rgba(251,191,36,.3);}
+.tag.han{background:rgba(236,72,153,.15);color:#f472b6;border:1px solid rgba(236,72,153,.3);}
+.note{background:rgba(251,191,36,.08);border-left:3px solid var(--yellow);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.8rem;color:var(--muted);margin:10px 0;}
+.note strong{color:var(--txt);}
+footer{text-align:center;padding:20px;font-size:.72rem;color:var(--muted);border-top:1px solid var(--bd);margin-top:30px;}
+@media(max-width:640px){.endpoint{flex-direction:column;align-items:flex-start;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">6<span>stream</span> <span>API Docs</span></div>
+  <div class="hd-nav">
+    <a href="/">Home</a>
+    <a href="/route/pogi/si/jhames/admin/dashboard">Admin</a>
+  </div>
+</header>
+<div class="container">
+
+<div class="hero">
+  <h1>6stream API Documentation</h1>
+  <p>Complete anime & 18+ scraper API. All routes return JSON. Replace <code>your_api_key_here</code> with your actual API key in all examples.</p>
+</div>
+
+<h2>Authentication</h2>
+<p style="font-size:.85rem;color:var(--muted);margin-bottom:10px;">You can authenticate in <strong style="color:var(--txt)">3 ways</strong>. Choose whichever works for your setup.</p>
+
+<div class="auth-box">
+  <div class="ab-hd">Method 1 — Query Parameter (easiest)</div>
+  <pre>curl "${BASE}/api/home?apipass=your_api_key_here"</pre>
+</div>
+
+<div class="auth-box">
+  <div class="ab-hd">Method 2 — Header</div>
+  <pre>curl -H "${authH}" \\
+  "${BASE}/api/home"</pre>
+</div>
+
+<div class="auth-box">
+  <div class="ab-hd">Method 3 — Bearer Token (recommended for apps)</div>
+  <pre>curl -H "${authB}" \\
+  "${BASE}/api/home"</pre>
+</div>
+
+<div class="note">
+  <strong>Note:</strong> Get your API key from the admin dashboard. Replace <code>your_api_key_here</code> with your actual key in all examples.
+</div>
+
+<h2>Getting Started</h2>
+
+<h3>cURL Examples</h3>
+<pre>
+<span class="cmt"># Get featured anime</span>
+curl "${BASE}/api/home${authQ}"
+
+<span class="cmt"># Search for anime</span>
+curl "${BASE}/api/search?q=naruto${authQ}"
+
+<span class="cmt"># Stream an episode (one call = everything)</span>
+curl "${BASE}/api/play/one-piece/1${authQ}"</pre>
+
+<h3>JavaScript / React Native</h3>
+<pre>
+<span class="cmt">// Using fetch with Bearer token</span>
+const API = "${BASE}";
+const KEY = "<span class="str">your_api_key_here</span>";
+
+async function getAnime(slug) {
+  const res = await fetch(\`<span class="url">\${API}/api/anime/\${slug}</span>\`, {
+    headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> }
+  });
+  return res.json();
+}
+
+<span class="cmt">// Stream an episode</span>
+const stream = await fetch(
+  \`<span class="url">\${API}/api/play/one-piece/1</span>\`,
+  { headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> } }
+);</pre>
+
+<h3>React Native Video Player</h3>
+<pre>
+<span class="cmt">// Install: npm install react-native-video</span>
+import Video from <span class="str">'react-native-video'</span>;
+
+const API = "${BASE}";
+const KEY = "<span class="str">your_api_key_here</span>";
+
+async function getStream(slug, ep) {
+  const res = await fetch(
+    \`<span class="url">\${API}/api/play/\${slug}/\${ep}</span>\`,
+    { headers: { <span class="str">"Authorization"</span>: <span class="str">\`Bearer \${KEY}\`</span> } }
+  );
+  const data = await res.json();
+  <span class="cmt">// Use HLS proxy for CORS-free streaming</span>
+  return \`<span class="url">\${API}/api/hls?url=\${encodeURIComponent(data.sources[0].url)}</span>\`;
+}
+
+<span class="cmt">// In your component:</span>
+<Video source={\{ uri: streamUrl }} controls={true} resizeMode="contain" /></pre>
+
+<h3>Python</h3>
+<pre>
+<span class="kw">import</span> requests
+
+API = "${BASE}"
+KEY = "your_api_key_here"
+
+<span class="cmt"># Get home page</span>
+res = requests.get(f"<span class="url">{API}/api/home</span>",
+  headers={"Authorization": f"Bearer {KEY}"})
+data = res.json()
+
+<span class="cmt"># Stream episode</span>
+res = requests.get(f"<span class="url">{API}/api/play/one-piece/1</span>",
+  params={"apipass": KEY})
+stream = res.json()
+print(stream["sources"][0]["url"])</pre>
+
+<h3>Axios</h3>
+<pre>
+<span class="kw">import</span> axios from <span class="str">'axios'</span>;
+
+const api = axios.create({
+  baseURL: "<span class="url">${BASE}</span>",
+  headers: { <span class="str">"Authorization"</span>: <span class="str">"Bearer your_api_key_here"</span> }
+});
+
+<span class="cmt">// Usage</span>
+const { data } = await api.get("<span class="url">/api/home</span>");
+const { data: stream } = await api.get("<span class="url">/api/play/one-piece/1</span>");</pre>
+
+<h2>API Endpoints</h2>
+
+<h3>Anime — Browse</h3>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/home</span><span class="desc">Featured & recent anime</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/all</span><span class="desc">Home + latest + popular combined</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/latest?page=1</span><span class="desc">Latest updated anime</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/popular?page=1</span><span class="desc">Most viewed anime</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/search?q=title</span><span class="desc">Search anime by title</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/genres</span><span class="desc">All genres list</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/genre/:genreId?page=1</span><span class="desc">Anime by genre (action, romance, etc)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/type/:type?page=1</span><span class="desc">tv | movie | ova | ona | special | music</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/status/:status?page=1</span><span class="desc">currently-airing | finished-airing | not-yet-aired</span></div>
+
+<h3>Anime — Detail & Streaming</h3>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/anime/:slug</span><span class="desc">Get anime info + numericId</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/anime/:slug/episodes</span><span class="desc">Get episode list (each has serverKey)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/servers?key=serverKey</span><span class="desc">Get server list for episode</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/source/:linkId</span><span class="desc">Get embed URL from linkId</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/player?url=embedUrl</span><span class="desc">Get real m3u8 + subtitles</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/stream/:linkId</span><span class="desc">embed URL + m3u8 + subtitles in one</span></div>
+<div class="endpoint" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.06);">
+  <span class="method">GET</span><span class="path" style="color:var(--green);font-weight:600;">/api/play/:slug/:epNum?type=sub&server=0</span>
+  <span class="desc">⭐ <strong style="color:var(--green);">Full pipeline in ONE call</strong> — m3u8 + subtitles + skip times</span>
+</div>
+
+<h3>HLS Proxy & Download</h3>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hls?url=m3u8_url</span><span class="desc">Proxy HLS stream (rewrites segments, no CORS)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hls-download?url=m3u8_url&name=title</span><span class="desc">Download as MP4 (ffmpeg on server)</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/proxy?url=page_url</span><span class="desc">Embed player page with ad-blocker</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/img-proxy?url=image_url</span><span class="desc">Proxy hotlink-protected images</span></div>
+
+<h3>Hanime.tv <span class="tag han">18+</span></h3>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/trending?page=0&per_page=24</span><span class="desc">Trending videos</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/new?page=0&per_page=24</span><span class="desc">Newest videos</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/browse?tags=tag1,tag2&brands=brand1</span><span class="desc">Browse with filters</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/search?q=query</span><span class="desc">Search videos</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/tags</span><span class="desc">All tags</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/hanime/video/:slug</span><span class="desc">Video detail + clean stream URLs</span></div>
+
+<h2>Streaming Flow</h2>
+
+<div class="note">
+  <strong>Quickest way:</strong> Use <code>/api/play/:slug/:epNum</code> — it does all 5 steps in one call.
+</div>
+
+<pre>
+<span class="cmt"># Step-by-step flow:</span>
+
+<span class="cmt"># 1. Get anime info</span>
+GET /api/anime/one-piece<span class="str">${authQ}</span>  →  numericId: 12
+
+<span class="cmt"># 2. Get episodes</span>
+GET /api/anime/one-piece/episodes?id=12<span class="str">${authQ}</span>  →  serverKey: "abc123"
+
+<span class="cmt"># 3. Get servers</span>
+GET /api/servers?key=abc123<span class="str">${authQ}</span>  →  linkId: "xyz789"
+
+<span class="cmt"># 4. Get embed URL</span>
+GET /api/source/xyz789<span class="str">${authQ}</span>  →  embedUrl: "https://..."
+
+<span class="cmt"># 5. Get real m3u8</span>
+GET /api/player?url=embedUrl<span class="str">${authQ}</span>  →  m3u8 + subtitles
+
+<span class="cmt"># ⭐ OR — one call does all 5 steps:</span>
+GET /api/play/one-piece/1<span class="str">${authQ}</span>
+<span class="cmt"># Returns: { sources: [{url: "m3u8"}], subtitles: [...], intro: {...}, outro: {...} }</span></pre>
+
+<h2>Code Samples</h2>
+
+<h3>Get Stream URL (JavaScript)</h3>
+<pre>
+<span class="kw">async function</span> getStreamUrl(slug, episode) {
+  const res = await fetch(
+    \`<span class="url">${BASE}/api/play/\${slug}/\${episode}</span>\`,
+    { headers: { <span class="str">"Authorization"</span>: <span class="str">"Bearer your_api_key_here"</span> } }
+  );
+  const data = await res.json();
+  return {
+    m3u8: data.sources[0].url,
+    subtitles: data.subtitles,
+    intro: data.intro,
+    outro: data.outro
+  };
+}
+
+<span class="cmt">// Usage</span>
+const { m3u8 } = await getStreamUrl("one-piece", 1050);
+console.log(m3u8);</pre>
+
+<h3>Download Video (cURL)</h3>
+<pre>
+<span class="cmt"># Download as MP4</span>
+curl -o "one-piece-ep-1.mp4" \\
+  "${BASE}/api/play/one-piece/1${authQ}" \\
+  -H "Accept: application/json"
+
+<span class="cmt"># Or use HLS download endpoint</span>
+curl -o "one-piece.mp4" \\
+  "${BASE}/api/hls-download?url=PASTE_M3U8_URL_HERE&name=one-piece-ep-1${authQ}"</pre>
+
+<h3>Watch in VLC</h3>
+<pre>
+<span class="cmt"># First get the m3u8 URL from /api/play</span>
+curl "${BASE}/api/play/one-piece/1${authQ}" | jq -r '.sources[0].url'
+
+<span class="cmt"># Then paste the URL into VLC: Media → Open Network Stream</span>
+<span class="cmt"># Or use the HLS proxy (no CORS issues):</span>
+vlc "${BASE}/api/hls?url=PASTE_M3U8_URL_HERE${authQ}"</pre>
+
+<h2>Admin Endpoints <span class="tag admin">admin</span></h2>
+<div class="note" style="border-left-color:var(--yellow);">
+  <strong>Admin access only.</strong> These require the master admin password. Get it from the project owner.
+</div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/generate-key?label=myapp</span><span class="desc">Generate encrypted API key</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/ban-key?hash=xxx&reason=abuse</span><span class="desc">Ban a key</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/unban-key?hash=xxx</span><span class="desc">Unban a key</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/delete-key?hash=xxx</span><span class="desc">Permanently delete a key</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/stats</span><span class="desc">Full dashboard data as JSON</span></div>
+<div class="endpoint"><span class="method">GET</span><span class="path">/api/admin/key-logs?hash=xxx</span><span class="desc">View all usage sessions for a key</span></div>
+
+</div>
+<footer>
+  <strong>6stream API</strong> &mdash; Data scraped from public sources &nbsp;&middot;&nbsp; Built by Jhames Martin
+</footer>
+</body>
+</html>`);
+});
+
 // ── Secret API Docs ───────────────────────────────────────────────────────────
 app.get("/jopay/jhames/api/doc/", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
