@@ -19,23 +19,6 @@ const {
 } = require("./scraper");
 const admin = require("./admin-manager");
 
-let hanimeScraper;
-const hanime = () => {
-  if (!hanimeScraper) hanimeScraper = require("./hanime-scraper");
-  return hanimeScraper;
-};
-const getTrending = (...args) => hanime().getTrending(...args);
-const getNew = (...args) => hanime().getNew(...args);
-const browse = (...args) => hanime().browse(...args);
-const searchHentai = (...args) => hanime().searchHentai(...args);
-const getTags = (...args) => hanime().getTags(...args);
-const getBrands = (...args) => hanime().getBrands(...args);
-const getVideoMeta = (...args) => hanime().getVideoMeta(...args);
-const getVideoInfo = (...args) => hanime().getVideoInfo(...args);
-const closeBrowser = async () => {
-  if (hanimeScraper) await hanimeScraper.closeBrowser();
-};
-
 const app = express();
 app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
@@ -295,16 +278,6 @@ app.get("/api", (req, res) => {
       "GET  /api/anime/:slug/episodes       (requires numericId in query OR auto-fetches)",
       "GET  /api/servers?key=<serverKey>    (serverKey = episode data-ids from episode list)",
       "GET  /api/source/:linkId             (video source URL from a server linkId)",
-      "── Hanime.tv ──",
-      "GET  /api/hanime                     (hanime docs)",
-      "GET  /api/hanime/trending",
-      "GET  /api/hanime/new",
-      "GET  /api/hanime/browse?tags=&brands=&ordering=",
-      "GET  /api/hanime/search?q=",
-      "GET  /api/hanime/tags",
-      "GET  /api/hanime/brands",
-      "GET  /api/hanime/meta/:slug",
-      "GET  /api/hanime/video/:slug",
     ],
     flow: [
       "1. GET /api/anime/:slug              → get numericId",
@@ -589,9 +562,14 @@ app.get("/api/source/:linkId", wrap(async (req, res) => {
 const CDN_REFERERS = [
   { match: ["cinewave", "lostproject"],         ref: "https://megaplay.buzz/" },
   { match: ["watching.onl", "fxpy", "sugevideo"], ref: "https://vidwish.live/"  },
-  { match: ["cdn.hanime", "hanime.tv", "highwinds-cdn"], ref: "https://hanime.tv/" },
 ];
-function refererFor(url) {
+function refererFor(url, explicitRef) {
+  if (explicitRef) {
+    try {
+      const o = new URL(explicitRef);
+      return `${o.protocol}//${o.hostname}/`;
+    } catch (_) {}
+  }
   try {
     const host = new URL(url).hostname;
     for (const { match, ref } of CDN_REFERERS) {
@@ -610,10 +588,11 @@ app.get("/api/hls", wrap(async (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send("url required");
 
+  const explicitRef = req.query.ref || "";
   const isM3U8req = url.includes(".m3u8");
   const isVttReq  = url.includes(".vtt");
   const hlsPass = (req.query.apipass === API_PASS || req.headers['x-api-pass'] === API_PASS) ? API_PASS : "";
-  const hlsCacheKey = `${url}|pass:${hlsPass ? "1" : "0"}`;
+  const hlsCacheKey = `${url}|ref:${explicitRef}|pass:${hlsPass ? "1" : "0"}`;
   const wantsDownload = req.query.download === "1";
   const cleanDownloadName = String(req.query.name || "source")
     .replace(/[\\/:*?"<>|]+/g, " ")
@@ -640,18 +619,26 @@ app.get("/api/hls", wrap(async (req, res) => {
     m3u8Cache.delete(hlsCacheKey);
   }
 
-  const referer = refererFor(url);
+  const referer = refererFor(url, explicitRef);
 
   // For m3u8 + vtt: buffer and process text
   if (isM3U8req || isVttReq) {
-    const r = await axios.get(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": referer, "Origin": referer.slice(0, -1), "Accept": "*/*",
-      },
-      responseType: "text",
-      timeout: 20000,
-    });
+    let r;
+    try {
+      r = await axios.get(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Referer": referer, "Origin": referer.slice(0, -1), "Accept": "*/*",
+        },
+        responseType: "text",
+        timeout: 20000,
+      });
+    } catch (e) {
+      const status = e.response?.status || 502;
+      res.status(status);
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      return res.send(`Upstream playlist error ${status}: ${e.message}`);
+    }
 
     const body = r.data;
 
@@ -659,12 +646,13 @@ app.get("/api/hls", wrap(async (req, res) => {
     if (isM3U8req || body.startsWith("#EXTM3U")) {
       const base = url.substring(0, url.lastIndexOf("/") + 1);
       const proxyBase = publicOrigin(req);
+      const refQuery = explicitRef ? `&ref=${encodeURIComponent(explicitRef)}` : "";
       const rewritten = body.replace(/^(?!#)(\S.*)$/gm, (line) => {
         line = line.trim();
         if (!line) return line;
         const abs = line.startsWith("http") ? line : base + line;
         const passQuery = hlsPass ? `&apipass=${encodeURIComponent(hlsPass)}` : "";
-        return `${proxyBase}/api/hls?url=${encodeURIComponent(abs)}${passQuery}`;
+        return `${proxyBase}/api/hls?url=${encodeURIComponent(abs)}${passQuery}${refQuery}`;
       });
       m3u8Cache.set(hlsCacheKey, { text: rewritten, time: Date.now() });
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl; charset=utf-8");
@@ -898,167 +886,6 @@ app.get("/api/play/:slug/:epNum", wrap(async (req, res) => {
   });
 }));
 
-// ── Hanime.tv ─────────────────────────────────────────────────────────────────
-app.get("/api/hanime", (req, res) => {
-  res.json({
-    name: "Hanime.tv API",
-    source: "https://hanime.tv",
-    endpoints: [
-      "GET  /api/hanime/trending?page=0&per_page=24",
-      "GET  /api/hanime/new?page=0&per_page=24&ordering=created_at_unix",
-      "GET  /api/hanime/browse?page=0&per_page=24&tags=tag1,tag2&brands=brand1&ordering=created_at_unix",
-      "GET  /api/hanime/search?q=<query>&page=0&per_page=24&tags=tag1,tag2&brands=brand1",
-      "GET  /api/hanime/tags",
-      "GET  /api/hanime/brands",
-      "GET  /api/hanime/meta/:slug     (fast metadata from search index)",
-      "GET  /api/hanime/video/:slug    (video detail + clean stream URLs, no ads)",
-    ],
-    note: "Video sources are direct CDN links — no ads, no redirects.",
-  });
-});
-
-app.get("/api/hanime/trending", wrap(async (req, res) => {
-  const page    = parseInt(req.query.page)     || 0;
-  const perPage = parseInt(req.query.per_page) || 24;
-  const data = await getTrending(page, perPage);
-  res.json({ success: true, page, total: data.length, data });
-}));
-
-app.get("/api/hanime/new", wrap(async (req, res) => {
-  const page     = parseInt(req.query.page)     || 0;
-  const perPage  = parseInt(req.query.per_page) || 24;
-  const ordering = req.query.ordering || "created_at_unix";
-  const data = await getNew(page, perPage, ordering);
-  res.json({ success: true, page, total: data.length, data });
-}));
-
-app.get("/api/hanime/browse", wrap(async (req, res) => {
-  const page     = parseInt(req.query.page)     || 0;
-  const perPage  = parseInt(req.query.per_page) || 24;
-  const ordering = req.query.ordering || "created_at_unix";
-  const tags     = req.query.tags   ? req.query.tags.split(",").map(t => t.trim()).filter(Boolean)   : [];
-  const brands   = req.query.brands ? req.query.brands.split(",").map(b => b.trim()).filter(Boolean) : [];
-  const data = await browse({ page, perPage, ordering, tags, brands });
-  res.json({ success: true, page, total: data.length, data });
-}));
-
-app.get("/api/hanime/search", wrap(async (req, res) => {
-  const query   = (req.query.q || req.query.query || "").trim();
-  const page    = parseInt(req.query.page)     || 0;
-  const perPage = parseInt(req.query.per_page) || 24;
-  const tags    = req.query.tags   ? req.query.tags.split(",").map(t => t.trim()).filter(Boolean)   : [];
-  const brands  = req.query.brands ? req.query.brands.split(",").map(b => b.trim()).filter(Boolean) : [];
-  const data = await searchHentai({ query, page, perPage, tags, brands });
-  res.json({ success: true, query, page, total: data.length, data });
-}));
-
-app.get("/api/hanime/tags", wrap(async (req, res) => {
-  const data = await getTags();
-  res.json({ success: true, total: data.length, data });
-}));
-
-app.get("/api/hanime/brands", wrap(async (req, res) => {
-  const data = await getBrands();
-  res.json({ success: true, total: data.length, data });
-}));
-
-app.get("/api/hanime/pixeldrain/:id/watermarked", wrap(async (req, res) => {
-  if (!ffmpegPath) {
-    return res.status(500).json({ success: false, message: "ffmpeg-static is not available." });
-  }
-
-  const id = req.params.id;
-  const upstream = `https://pixeldrain.com/api/filesystem/${encodeURIComponent(id)}`;
-  const font = process.platform === "win32"
-    ? "C\\:/Windows/Fonts/arialbd.ttf"
-    : "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
-  const watermark = `drawtext=fontfile='${font}':text='6stream':x=w-tw-24:y=24:fontsize=max(28\\,h*0.055):fontcolor=white@0.62:shadowcolor=black@0.85:shadowx=3:shadowy=3`;
-  const rawName = String(req.query.name || id)
-    .replace(/<[^>]*>/g, "")
-    .replace(/[\\/:*?"<>|]+/g, " ")
-    .replace(/\s+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120) || id;
-  const filename = `6Stream-jhamesmartin-${rawName}.mp4`;
-
-  res.setHeader("Content-Type", "video/mp4");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  res.setHeader("Cache-Control", "no-store");
-
-  const ff = spawn(ffmpegPath, [
-    "-hide_banner",
-    "-loglevel", "error",
-    "-headers", "User-Agent: Mozilla/5.0\r\nAccept: video/mp4,video/*,*/*\r\n",
-    "-i", upstream,
-    "-vf", watermark,
-    "-c:v", "libx264",
-    "-preset", "veryfast",
-    "-crf", "23",
-    "-c:a", "copy",
-    "-movflags", "frag_keyframe+empty_moov",
-    "-f", "mp4",
-    "pipe:1",
-  ], { windowsHide: true });
-
-  ff.stdout.pipe(res);
-  let errText = "";
-  ff.stderr.on("data", (chunk) => { errText += chunk.toString(); });
-  ff.on("error", (err) => {
-    if (!res.headersSent) res.status(500).json({ success: false, message: err.message });
-    else res.destroy(err);
-  });
-  ff.on("close", (code) => {
-    if (code && !res.headersSent) {
-      res.status(500).json({ success: false, message: errText || `ffmpeg exited with ${code}` });
-    }
-  });
-  req.on("close", () => {
-    if (!ff.killed) ff.kill("SIGKILL");
-  });
-}));
-
-app.get("/api/hanime/pixeldrain/:id", wrap(async (req, res) => {
-  const id = req.params.id;
-  const upstream = `https://pixeldrain.com/api/filesystem/${encodeURIComponent(id)}`;
-  const headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept": "video/mp4,video/*,*/*",
-  };
-  if (req.headers.range) headers.Range = req.headers.range;
-
-  const r = await axios.get(upstream, {
-    headers,
-    responseType: "stream",
-    validateStatus: (s) => s >= 200 && s < 400,
-    timeout: 30000,
-  });
-
-  res.status(r.status);
-  for (const h of ["content-type", "content-length", "content-range", "accept-ranges", "content-disposition"]) {
-    if (r.headers[h]) res.setHeader(h, r.headers[h]);
-  }
-  if (req.query.download === "1") {
-    const fallbackName = `${id}.mp4`;
-    const original = r.headers["content-disposition"] || "";
-    const match = original.match(/filename="([^"]+)"/i);
-    const filename = match ? match[1] : fallbackName;
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  }
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "public, max-age=3600");
-  r.data.pipe(res);
-}));
-
-app.get("/api/hanime/meta/:slug", wrap(async (req, res) => {
-  const data = await getVideoMeta(req.params.slug);
-  res.json({ success: true, data });
-}));
-
-app.get("/api/hanime/video/:slug", wrap(async (req, res) => {
-  const data = await getVideoInfo(req.params.slug);
-  res.json({ success: true, data });
-}));
-
 // ── Image proxy (passes Referer so hotlink-protected CDNs return 200) ─────────
 app.get("/api/img-proxy", wrap(async (req, res) => {
   const url = req.query.url;
@@ -1066,7 +893,7 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
     return res.status(400).send("bad url");
   }
   // Only allow known safe image CDNs
-  const allowed = ["hanime-cdn.com","hanime.tv","cdn.hanime","highwinds-cdn.com"];
+  const allowed = [];
   const host = (() => { try { return new URL(url).hostname; } catch(_) { return ""; } })();
   if (!allowed.some(h => host.endsWith(h))) {
     return res.status(403).json({ message: "Dont try to scrape this u gay", status: "blocked", reason: "nice try pero no" });
@@ -1076,7 +903,6 @@ app.get("/api/img-proxy", wrap(async (req, res) => {
     timeout: 12000,
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Referer": "https://hanime.tv/",
       "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
     },
   });
@@ -1661,47 +1487,6 @@ app.post("/api/tg-webhook", async (req, res) => {
         return streamEp(chatId, slug, epNum);
       }
 
-      if (type === "hv") {
-        const slug = parts[0];
-        await tgSend(chatId, "⏳ Getting video info\\.\\.\\.");
-        const vid = await getVideoInfo(slug).catch(() => null);
-        if (!vid) return tgSend(chatId, "❌ Video not found\\.");
-        const desc = vid.description?.slice(0, 250) || "";
-        const cap  = `🔞 *${escMd(vid.title)}*\n` +
-          (desc ? `\n${escMd(desc)}${vid.description?.length > 250 ? "\\.\\.\\." : ""}\n` : "") +
-          `\n🏷️ ${escMd((vid.tags || []).map(t => t.text).slice(0, 8).join(", ") || "N/A")}\n` +
-          `👁️ ${escMd(String(vid.views || 0))} views  👍 ${escMd(String(vid.likes || 0))}`;
-        const kb = { inline_keyboard: [[{ text: "▶️ Stream Sources", callback_data: `hs|${slug}` }]]};
-        if (vid.poster) return tgSendPhoto(chatId, vid.poster, cap, kb);
-        return tgSend(chatId, cap, kb);
-      }
-
-      if (type === "hs") {
-        const slug = parts[0];
-        const vid  = await getVideoInfo(slug).catch(() => null);
-        if (!vid?.sources?.length) return tgSend(chatId, "❌ No sources found\\.");
-        const best = vid.sources[0];
-        const lines = [
-          `▶️ *${escMd(vid.title)}*`,
-          `🎞️ *${escMd(String(vid.sources.length))} source${vid.sources.length > 1 ? "s" : ""} available:*`,
-          ...vid.sources.slice(0, 5).map(s =>
-            `• *${escMd(s.quality)}* \\(${escMd(s.kind)}\\) — \`${escMd(s.url)}\``
-          ),
-        ];
-        const dlUrl = `https://sixstream.onrender.com/api/hls-download?url=${encodeURIComponent(best.url)}&name=${encodeURIComponent(vid.title)}`;
-        return tgSend(chatId, lines.join("\n"), { inline_keyboard: [[
-          { text: `⬇️ Download Best (${best.quality})`, url: dlUrl },
-        ]]});
-      }
-
-      if (type === "ht") {
-        const tag  = parts[0];
-        const data = await browse({ tags: [tag], page: 0, perPage: 10 }).catch(() => []);
-        if (!data.length) return tgSend(chatId, `❌ No videos for *${escMd(tag)}*\\.`);
-        const rows = data.map(v => ([{ text: v.title.slice(0, 40), callback_data: `hv|${v.slug}`.slice(0, 64) }]));
-        return tgSend(chatId, `🔞 *${escMd(tag)}*\n\nSelect video:`, { inline_keyboard: rows });
-      }
-
       return;
     }
 
@@ -1715,7 +1500,7 @@ app.post("/api/tg-webhook", async (req, res) => {
 
     if (text.startsWith("/start")) {
       return tgSend(chatId,
-        `👋 *Welcome to 6stream Bot\\!*\n\nYour personal anime \\& 18\\+ assistant\\.\n\n/help — full command list`,
+        `👋 *Welcome to 6stream Bot\\!*\n\nYour personal anime assistant\\.\n\n/help — full command list`,
         { inline_keyboard: [[
           { text: "📱 Download App", url: "https://sixstream.onrender.com/download" },
           { text: "🌐 Open 6stream",  url: "https://sixstream.onrender.com" },
@@ -1731,10 +1516,6 @@ app.post("/api/tg-webhook", async (req, res) => {
         `/trending — most viewed\n` +
         `/new — latest anime\n` +
         `/watch \\<slug\\> \\<ep\\> — stream episode\n\n` +
-        `*🔞 Hanime*\n` +
-        `/hentai — trending hanime\n` +
-        `/hentai \\<tag\\> — browse by tag\n` +
-        `/tags — top tags \\(tap to browse\\)\n\n` +
         `*🤖 Other*\n` +
         `/recommend \\<query\\> — AI anime picks\n` +
         `/top10 — AI top 10 list\n` +
@@ -1777,34 +1558,6 @@ app.post("/api/tg-webhook", async (req, res) => {
       if (!slug || !epNum) return tgSend(chatId, "Usage: `/watch one\\-piece 1050`");
       await tgSend(chatId, `⏳ Getting stream for Ep *${escMd(epNum)}*\\.\\.\\.`);
       return streamEp(chatId, slug, epNum);
-    }
-
-    if (text.startsWith("/hentai")) {
-      const tag  = text.slice(7).trim();
-      await tgSend(chatId, tag ? `🔍 Browsing *${escMd(tag)}*\\.\\.\\.` : "⏳ Loading\\.\\.\\.");
-      const data = tag
-        ? await browse({ tags: [tag], page: 0, perPage: 10 }).catch(() => [])
-        : await getTrending(0, 10).catch(() => []);
-      if (!data.length) return tgSend(chatId, tag ? `❌ No videos found\\. Check /tags for valid names\\.` : "❌ Could not load\\.");
-      const rows = data.map(v => ([{ text: v.title.slice(0, 40), callback_data: `hv|${v.slug}`.slice(0, 64) }]));
-      return tgSend(chatId,
-        tag ? `🔞 *${escMd(tag)}*\n\nSelect video:` : "🔥 *Trending Hanime*\n\nSelect:",
-        { inline_keyboard: rows }
-      );
-    }
-
-    if (text === "/tags") {
-      const tags = await getTags().catch(() => []);
-      if (!tags.length) return tgSend(chatId, "❌ Could not load tags\\.");
-      const rows = [];
-      const top  = tags.slice(0, 30);
-      for (let i = 0; i < top.length; i += 3) {
-        rows.push(top.slice(i, i + 3).map(t => ({
-          text: `${t.text} (${t.count})`,
-          callback_data: `ht|${t.text}`.slice(0, 64),
-        })));
-      }
-      return tgSend(chatId, "🏷️ *Top Tags* — tap to browse:", { inline_keyboard: rows });
     }
 
     if (text.startsWith("/download")) {
@@ -1924,7 +1677,7 @@ footer{text-align:center;padding:18px;font-size:.7rem;color:var(--muted);border-
 
 <div class="hero">
   <h1>6stream API Documentation</h1>
-  <p>Anime & 18+ API. All endpoints return JSON. <br/>No API key needed to view this page — you'll need one to call the endpoints.</p>
+  <p>Anime API. All endpoints return JSON. <br/>No API key needed to view this page — you'll need one to call the endpoints.</p>
   <a class="get-btn" href="${FB_LINK}" target="_blank">Contact Me to Get an API Key</a>
 </div>
 
@@ -1960,15 +1713,6 @@ footer{text-align:center;padding:18px;font-size:.7rem;color:var(--muted);border-
 <div class="ep"><span class="meth">GET</span><span class="pth">/api/hls-download?url=m3u8_url&name=title</span><span class="dsc">Download as MP4</span></div>
 <div class="ep"><span class="meth">GET</span><span class="pth">/api/proxy?url=page_url</span><span class="dsc">Embed with ad-blocker</span></div>
 <div class="ep"><span class="meth">GET</span><span class="pth">/api/img-proxy?url=image_url</span><span class="dsc">Proxy protected images</span></div>
-</div>
-
-<div class="section">
-<h3>Hanime.tv</h3>
-<div class="ep"><span class="meth">GET</span><span class="pth">/api/hanime/trending?page=0&per_page=24</span><span class="dsc">Trending</span></div>
-<div class="ep"><span class="meth">GET</span><span class="pth">/api/hanime/new</span><span class="dsc">Newest</span></div>
-<div class="ep"><span class="meth">GET</span><span class="pth">/api/hanime/search?q=query</span><span class="dsc">Search</span></div>
-<div class="ep"><span class="meth">GET</span><span class="pth">/api/hanime/tags</span><span class="dsc">All tags</span></div>
-<div class="ep"><span class="meth">GET</span><span class="pth">/api/hanime/video/:slug</span><span class="dsc">Video detail + streams</span></div>
 </div>
 
 <h2>Streaming Flow</h2>
@@ -2099,7 +1843,7 @@ footer strong{color:var(--txt);}
 <main>
   <div class="hero">
     <h1>6stream API Documentation</h1>
-    <p>Full anime &amp; 18+ scraper API. All routes return JSON. Built by <strong style="color:var(--txt)">Jhames Martin</strong> &mdash; sources: <code>anisuge.se</code> (anime) &amp; <code>hanime.tv</code> (18+).</p>
+    <p>Full anime scraper API. All routes return JSON. Built by <strong style="color:var(--txt)">Jhames Martin</strong> &mdash; source: <code>anisuge.se</code>.</p>
   </div>
 
   <div class="auth-card">
@@ -2155,23 +1899,7 @@ footer strong{color:var(--txt);}
     ${ep('/api/hls<span class="qs">?url=m3u8Url</span>',"HLS proxy — rewrites all segment URLs")}
     ${ep('/api/hls<span class="qs">?url=...&amp;download=1&amp;name=title</span>',"Download m3u8 playlist file")}
     ${ep('/api/hls-download<span class="qs">?url=m3u8&amp;name=title</span>',"Full HLS as downloadable MP4 (ffmpeg)")}
-    ${ep('/api/img-proxy<span class="qs">?url=imageUrl</span>',"Image proxy for hanime CDN")}
-  </div>
-
-  <div class="sec">
-    <div class="sec-title">Hanime.tv (18+)</div>
-    ${ep("/api/hanime","Hanime endpoint list")}
-    ${ep('/api/hanime/trending<span class="qs">?page=0&amp;per_page=24</span>',"Trending videos")}
-    ${ep('/api/hanime/new<span class="qs">?page=0&amp;ordering=created_at_unix</span>',"Newest videos")}
-    ${ep('/api/hanime/browse<span class="qs">?tags=...&amp;brands=...&amp;ordering=...</span>',"Browse with filters")}
-    ${ep('/api/hanime/search<span class="qs">?q=query&amp;tags=...&amp;brands=...</span>',"Search videos")}
-    ${ep("/api/hanime/tags","All tags")}
-    ${ep("/api/hanime/brands","All brands / studios")}
-    ${ep('/api/hanime/meta/<span class="prm">:slug</span>',"Fast metadata from search index")}
-    ${ep('/api/hanime/video/<span class="prm">:slug</span>',"Video detail + clean CDN stream URLs")}
-    ${ep('/api/hanime/pixeldrain/<span class="prm">:id</span>',"Proxy Pixeldrain video (Range supported)")}
-    ${ep('/api/hanime/pixeldrain/<span class="prm">:id</span><span class="qs">?download=1</span>',"Force-download Pixeldrain video")}
-    ${ep('/api/hanime/pixeldrain/<span class="prm">:id</span>/watermarked<span class="qs">?name=title</span>',"Download with 6stream watermark (ffmpeg)")}
+    ${ep('/api/img-proxy<span class="qs">?url=imageUrl</span>',"Image proxy for protected CDNs")}
   </div>
 </main>
 <footer>
@@ -2201,16 +1929,8 @@ if (require.main === module) {
     .catch(e => console.warn("[tg] webhook registration failed:", e.message));
 
   const server = app.listen(PORT, () => {
-    console.log(`\n6stream API  -> http://localhost:${PORT}/api`);
-    console.log(`Hanime API   -> http://localhost:${PORT}/api/hanime\n`);
-
-    getTrending(0, 1)
-      .then(() => console.log("[hanime] prewarm complete"))
-      .catch((err) => console.warn("[hanime] prewarm failed:", err.message));
+    console.log(`\n6stream API  -> http://localhost:${PORT}/api\n`);
   });
-
-  process.on("SIGINT", async () => { await closeBrowser(); process.exit(0); });
-  process.on("SIGTERM", async () => { await closeBrowser(); process.exit(0); });
 
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {

@@ -1,11 +1,10 @@
 # 6stream Scraper API
 
-6stream is a Node.js/Express scraper API with a built-in web player UI. It serves anime content from the configured anime scraper, supports 18+ mode metadata, includes proxy helpers for HLS/MP4 playback, and protects API access with a remote allowlist.
+6stream is a Node.js/Express scraper API with a built-in web player UI. It serves anime content from the configured anime scraper, includes proxy helpers for HLS/MP4 playback, and protects API access with a remote allowlist.
 
 ## Features
 
 - Anime browsing, search, genres, details, episodes, servers, and video sources.
-- 18+ browsing, search, tags, metadata, related videos, and Pixeldrain proxy/download helpers.
 - Custom player UI with play/pause, mute, volume, progress, speed, fullscreen, subtitle selector, Sub/Dub badges, and 6stream watermark.
 - Load more, pagination, carousel, skeleton loaders, responsive layout, and mobile-friendly controls.
 - CORS/API gate based on a private server-side access list.
@@ -198,50 +197,6 @@ Anime watch flow:
 5. Play returned HLS/MP4 source through the custom player.
 ```
 
-### 18+ Mode
-
-```text
-GET /api/hanime
-GET /api/hanime/trending?page=0&per_page=24
-GET /api/hanime/new?page=0&per_page=24
-GET /api/hanime/browse?page=0&per_page=24&tags=<tag>&brands=<brand>&ordering=<ordering>
-GET /api/hanime/search?q=<query>&page=0&per_page=24
-GET /api/hanime/tags
-GET /api/hanime/brands
-GET /api/hanime/meta/:slug
-GET /api/hanime/video/:slug
-GET /api/hanime/pixeldrain/:id
-GET /api/hanime/pixeldrain/:id/watermarked?name=<video_name>
-```
-
-18+ watch flow:
-
-```text
-1. GET /api/hanime/trending or /api/hanime/search
-2. GET /api/hanime/video/:slug
-3. Use the returned sources/downloadUrl in the custom player/download button.
-```
-
-## Download Naming
-
-Watermarked download route uses this filename style:
-
-```text
-6Stream-jrmph-nameofvideo.mp4
-```
-
-Example:
-
-```text
-GET /api/hanime/pixeldrain/:id/watermarked?name=Sample%20Video
-```
-
-Downloads as:
-
-```text
-6Stream-jrmph-Sample-Video.mp4
-```
-
 ## Frontend Files
 
 - `test.html` - main UI and custom player.
@@ -253,7 +208,6 @@ Downloads as:
 
 - `server.js` - Express app, API routes, proxies, CORS/access gate.
 - `scraper.js` - anime scraper functions.
-- `hanime-scraper.js` - 18+ metadata/search/video helper functions.
 - `playerScraper.js` - player/source scraping helper.
 
 ## Troubleshooting

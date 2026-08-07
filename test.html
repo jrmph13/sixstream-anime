@@ -11,15 +11,9 @@
   --accent:#7c3aed;--accent2:#a855f7;
   --text:#e2e8f0;--muted:#94a3b8;--card:#1a1a24;--border:#2a2a3a;
 }
-body.mode-h{
-  --accent:#be185d;--accent2:#ec4899;
-}
 body.theme-light{
   --bg:#f5f7fb;--bg2:#ffffff;--bg3:#eef2f7;
   --text:#111827;--muted:#64748b;--card:#ffffff;--border:#d7dde8;
-}
-body.theme-light.mode-h{
-  --accent:#db2777;--accent2:#be185d;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;}
@@ -63,7 +57,6 @@ nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;h
 .drawer-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
 .drawer-actions button,.drawer-wide-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:.8rem;cursor:pointer;text-align:left;transition:all .18s;}
 .drawer-actions button:hover,.drawer-wide-btn:hover{border-color:var(--accent);background:rgba(124,58,237,.14);}
-body.mode-h .drawer-actions button:hover,body.mode-h .drawer-wide-btn:hover{background:rgba(190,24,93,.14);}
 .drawer-search{display:flex;gap:7px;}
 .drawer-search input{min-width:0;flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;outline:none;}
 .drawer-search input:focus{border-color:var(--accent);}
@@ -149,7 +142,6 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:12px;margin-bottom:20px;}
 .card{background:var(--card);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;border:1px solid var(--border);}
 .card:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(124,58,237,.3);}
-body.mode-h .card:hover{box-shadow:0 8px 20px rgba(190,24,93,.3);}
 .ct{position:relative;padding-top:140%;background:var(--bg3);}
 .ct img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;}
 .cb-type{position:absolute;top:5px;left:5px;background:var(--accent);color:#fff;font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:3px;}
@@ -189,7 +181,6 @@ body.mode-h .card:hover{box-shadow:0 8px 20px rgba(190,24,93,.3);}
 .load-more-wrap{display:flex;justify-content:center;margin:-4px 0 24px;}
 .load-more-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 22px;border-radius:999px;cursor:pointer;font-size:.82rem;font-weight:800;transition:all .2s;}
 .load-more-btn:hover:not(:disabled){border-color:var(--accent);background:rgba(124,58,237,.16);}
-body.mode-h .load-more-btn:hover:not(:disabled){background:rgba(190,24,93,.16);}
 .load-more-btn:disabled{opacity:.5;cursor:default;}
 
 /* GENRE / TAG PILLS */
@@ -211,7 +202,6 @@ body.mode-h .load-more-btn:hover:not(:disabled){background:rgba(190,24,93,.16);}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px;}
 .tag{font-size:.67rem;padding:2px 7px;border-radius:4px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);}
 .tag.a{background:rgba(124,58,237,.2);border-color:var(--accent);color:var(--accent2);}
-body.mode-h .tag.a{background:rgba(190,24,93,.2);border-color:var(--accent);color:var(--accent2);}
 .synopsis{font-size:.81rem;color:var(--muted);line-height:1.6;margin-bottom:10px;}
 .meta-g{display:flex;flex-wrap:wrap;gap:12px;font-size:.77rem;color:var(--muted);}
 .meta-g b{color:var(--text);}
@@ -232,7 +222,6 @@ body.mode-h .tag.a{background:rgba(190,24,93,.2);border-color:var(--accent);colo
 .ep-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background .15s;border:1px solid transparent;margin-bottom:3px;}
 .ep-row:hover{background:var(--bg3);}
 .ep-row.on{background:rgba(124,58,237,.15);border-color:var(--accent);}
-body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .ep-n{width:28px;height:28px;border-radius:5px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:var(--muted);flex-shrink:0;}
 .ep-row.on .ep-n{background:var(--accent);color:#fff;}
 .ep-t{font-size:.77rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -241,10 +230,6 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .modal-close{background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:7px;cursor:pointer;font-size:.82rem;}
 .modal-close:hover{color:var(--text);}
 .modal-status{font-size:.78rem;color:var(--muted);}
-
-/* HANIME WATCH BUTTON */
-.watch-now-btn{display:block;width:100%;padding:10px;margin-top:14px;border-radius:8px;background:var(--accent);border:none;color:#fff;font-size:.9rem;font-weight:700;cursor:pointer;transition:opacity .2s;}
-.watch-now-btn:hover{opacity:.85;}
 
 /* WATCH PAGE */
 .back{display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);padding:6px 12px;border-radius:7px;cursor:pointer;font-size:.82rem;transition:all .2s;margin-bottom:14px;}
@@ -284,7 +269,7 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .vc-type.sub{color:#6ee7b7;border-color:rgba(16,185,129,.6);}
 .vc-type.dub{color:#93c5fd;border-color:rgba(59,130,246,.6);}
 .vc-spacer{flex:1;min-width:0;}
-.vc-speed,.vc-sub,.vc-quality{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 6px;font-size:.72rem;outline:none;flex-shrink:0;max-width:90px;}
+.vc-speed,.vc-sub,.vc-quality,.vc-audio{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 6px;font-size:.72rem;outline:none;flex-shrink:0;max-width:90px;}
 .vc-sub:disabled{display:none;}
 
 /* SUBTITLE POSITION — stays above controls, works in fullscreen */
@@ -303,7 +288,7 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
   .vc-time{font-size:.62rem;}
   .vc-btn{width:36px;height:36px;}
   .vc-btn svg{width:17px;height:17px;}
-  .vc-speed,.vc-sub,.vc-quality{padding:5px 5px;font-size:.68rem;max-width:72px;}
+  .vc-speed,.vc-sub,.vc-quality,.vc-audio{padding:5px 5px;font-size:.68rem;max-width:72px;}
   .video-controls{padding:30px 8px 6px;gap:5px;}
   .vc-progress{height:5px;margin-bottom:1px;}
 }
@@ -334,16 +319,6 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
 .w-ep-scroll{overflow-y:auto;flex:1;}
 .w-ep-scroll::-webkit-scrollbar{width:3px;}
 .w-ep-scroll::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
-
-/* RELATED HANIME ITEM */
-.rel-item{display:flex;gap:8px;padding:7px 0;cursor:pointer;border-bottom:1px solid var(--border);transition:opacity .15s;}
-.rel-item:last-child{border-bottom:none;}
-.rel-item:hover{opacity:.75;}
-.rel-thumb{flex-shrink:0;width:64px;height:42px;border-radius:5px;overflow:hidden;background:var(--bg3);}
-.rel-thumb img{width:100%;height:100%;object-fit:cover;}
-.rel-info{flex:1;min-width:0;}
-.rel-title{font-size:.72rem;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.rel-meta{font-size:.65rem;color:var(--muted);margin-top:2px;}
 
 /* TOAST */
 #toast{position:fixed;bottom:18px;right:18px;background:var(--bg2);border:1px solid var(--border);padding:10px 16px;border-radius:9px;font-size:.82rem;transform:translateY(50px);opacity:0;transition:all .25s;z-index:999;max-width:280px;}
@@ -417,7 +392,6 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
   .center-pop svg{width:32px;height:32px;}
   .sv-row{gap:5px;}
   .sv-btn{padding:6px 10px;}
-  .rel-thumb{width:58px;height:38px;}
   #toast{left:10px;right:10px;bottom:12px;max-width:none;text-align:center;}
 }
 @media(max-width:520px){
@@ -459,7 +433,7 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
   .hero-actions button{min-width:100%;font-size:.78rem;}
   .modal-poster{display:none;}
   .vc-vol{display:none;}
-  .vc-speed,.vc-sub,.vc-quality{font-size:.64rem;padding:4px;max-width:64px;}
+  .vc-speed,.vc-sub,.vc-quality,.vc-audio{font-size:.64rem;padding:4px;max-width:64px;}
   .vc-type{font-size:.56rem;padding:2px 5px;}
 }
 @media(max-height:520px) and (orientation:landscape){
@@ -605,11 +579,6 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
   </button>
 
-  <!-- MODE TOGGLE -->
-  <div class="mode-toggle">
-    <button class="mt-btn on" id="mt-anime" onclick="setMode('anime')">Anime</button>
-    <button class="mt-btn"    id="mt-h"     onclick="setMode('h')">18+</button>
-  </div>
   <div class="theme-toggle">
     <button class="theme-btn" id="th-dark" onclick="setTheme('dark')">Dark</button>
     <button class="theme-btn" id="th-light" onclick="setTheme('light')">Light</button>
@@ -628,14 +597,6 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
     <button onclick="loadSec('genres')"  id="nb-genres">Genres</button>
     <button onclick="loadTop10()"        id="nb-top10">Top 10</button>
   </div>
-
-  <!-- Hanime nav buttons -->
-  <div class="nbtns" id="nbtns-h" style="display:none">
-    <button onclick="hLoadSec('trending')" id="nb-trending">Trending</button>
-    <button onclick="hLoadSec('new')"      id="nb-new">New</button>
-    <button onclick="hLoadSec('tags')"     id="nb-tags">Tags</button>
-    <button onclick="loadTop10()"          id="nb-htop10">Top 10</button>
-  </div>
 </nav>
 
 <div id="mob-srch-bar">
@@ -651,13 +612,6 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
     <button class="drawer-close" onclick="closeDrawer()" title="Close">X</button>
   </div>
   <div class="drawer-body">
-    <div class="drawer-block">
-      <div class="drawer-label">Mode</div>
-      <div class="mode-toggle" style="width:max-content">
-        <button class="mt-btn on" id="d-mt-anime" onclick="setMode('anime');closeDrawer()">Anime</button>
-        <button class="mt-btn" id="d-mt-h" onclick="setMode('h');closeDrawer()">18+</button>
-      </div>
-    </div>
     <div class="drawer-block">
       <div class="drawer-label">Theme</div>
       <div class="theme-toggle">
@@ -678,15 +632,6 @@ body.mode-h .ep-row.on{background:rgba(190,24,93,.15);}
         <button onclick="loadSec('latest');closeDrawer()">Latest</button>
         <button onclick="loadSec('popular');closeDrawer()">Popular</button>
         <button onclick="loadSec('genres');closeDrawer()">Genres</button>
-        <button onclick="goHome();closeDrawer()">Home</button>
-      </div>
-    </div>
-    <div class="drawer-block" id="drawer-h" style="display:none">
-      <div class="drawer-label">18+ Options</div>
-      <div class="drawer-actions">
-        <button onclick="hLoadSec('trending');closeDrawer()">Trending</button>
-        <button onclick="hLoadSec('new');closeDrawer()">New</button>
-        <button onclick="hLoadSec('tags');closeDrawer()">Tags</button>
         <button onclick="goHome();closeDrawer()">Home</button>
       </div>
     </div>
@@ -763,19 +708,15 @@ const API = `${API_ORIGIN}/api`;
 function apiFetch(url, opts={}){ return fetch(url, opts); }
 function apiUrl(path){ return `${API_ORIGIN}${path}`; }
 
-let mode = 'anime'; // 'anime' | 'h'
 let currentSlug = null, currentEps = [], currentSvs = [], currentPage = 1;
 let currentSection = 'home';
 let activeEpIdx = -1;
 let homeLoadId = 0;
 let heroIndex = 0;
 let heroItems = [];
-let heroKind = 'anime';
 let heroTimer = null;
 const loadStores = {};
 
-// Hanime watch state
-let hCurrentSources = [], hCurrentRelated = [];
 let currentAnimeTitle = '';
 
 // Frontend cache
@@ -907,22 +848,6 @@ function fmtDur(sec){
   return `${m}:${String(s).padStart(2,'0')}`;
 }
 
-function setMode(m){
-  mode = m;
-  document.body.classList.toggle('mode-h', m==='h');
-  document.getElementById('mt-anime').classList.toggle('on', m==='anime');
-  document.getElementById('mt-h').classList.toggle('on', m==='h');
-  document.getElementById('d-mt-anime')?.classList.toggle('on', m==='anime');
-  document.getElementById('d-mt-h')?.classList.toggle('on', m==='h');
-  document.getElementById('nbtns-anime').style.display = m==='anime'?'flex':'none';
-  document.getElementById('nbtns-h').style.display     = m==='h'?'flex':'none';
-  document.getElementById('drawer-anime').style.display = m==='anime'?'block':'none';
-  document.getElementById('drawer-h').style.display = m==='h'?'block':'none';
-  document.querySelector('#qi').placeholder = m==='h' ? 'Search 18+ videos...' : 'Search anime...';
-  sdd.classList.remove('open');
-  goHome();
-}
-
 function card(a){
   const safeslug=(a.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const sub=a.sub?`<span class="sub-c">S${a.sub}</span>`:'';
@@ -943,33 +868,6 @@ function card(a){
     <div class="ci">
       <div class="ci-t">${a.title||''}</div>
       ${a.titleJP&&a.titleJP!==a.title?`<div class="ci-s">${a.titleJP}</div>`:''}
-      ${meta.length?`<div class="ci-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>`:''}
-    </div>
-  </div>`;
-}
-
-// Route hanime-cdn.com images through our proxy (403 without Referer)
-function hImg(url){ return url ? apiUrl(`/api/img-proxy?url=${encodeURIComponent(url)}`) : ''; }
-
-function hCard(v){
-  const safeslug=(v.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  const imgSrc=hImg(v.poster||v.cover||'');
-  const dur=v.duration?`<span class="cb-dur">${fmtDur(v.duration)}</span>`:'';
-  const views=v.views?`<span class="cb-views">Views ${fmtViews(v.views)}</span>`:'';
-  const firstTag=v.tags&&v.tags[0]?`<div class="ci-s">${v.tags.slice(0,3).join(', ')}</div>`:'';
-  const meta=[
-    v.duration?fmtDur(v.duration):null,
-    v.views?`Views ${fmtViews(v.views)}`:null,
-    v.likes?`Likes ${fmtViews(v.likes)}`:null,
-  ].filter(Boolean).slice(0,3);
-  return `<div class="card" onclick="hOpenModal('${safeslug}')">
-    <div class="ct">
-      <img src="${imgSrc}" loading="lazy" onerror="this.style.opacity=0"/>
-      ${dur}${views}
-    </div>
-    <div class="ci">
-      <div class="ci-t">${v.title||''}</div>
-      ${firstTag}
       ${meta.length?`<div class="ci-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>`:''}
     </div>
   </div>`;
@@ -1023,23 +921,8 @@ async function loadMoreSec(name,page){
   }catch(e){ if(btn){ btn.disabled=false; btn.textContent='Try Again'; } toast(e.message,false); }
 }
 
-async function hLoadMoreSec(name,page){
-  const btn=document.getElementById('lm-hsec');
-  if(btn){ btn.disabled=true; btn.textContent='Loading...'; }
-  try{
-    const d=await api(`/api/hanime/${name}?page=${page}`);
-    const items=d.data||[];
-    document.getElementById('g-main')?.insertAdjacentHTML('beforeend', items.map(hCard).join(''));
-    if(btn){
-      if(items.length>=24){ btn.disabled=false; btn.textContent='Load More'; btn.onclick=()=>hLoadMoreSec(name,page+1); }
-      else btn.style.display='none';
-    }
-  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='Try Again'; } toast(e.message,false); }
-}
-
-function heroHTML(items=[], kind='anime'){
+function heroHTML(items=[]){
   heroItems=items.slice(0,8);
-  heroKind=kind;
   heroIndex=0;
   if(!heroItems.length) return '';
   setTimeout(startHeroAuto,0);
@@ -1049,24 +932,19 @@ function heroHTML(items=[], kind='anime'){
 function renderHero(){
   const item=heroItems[heroIndex]||heroItems[0];
   if(!item) return '';
-  const rawImg=item.poster||item.cover||'';
-  const img=heroKind==='h'?hImg(rawImg):rawImg;
+  const img=item.poster||item.cover||'';
   const title=item.title||'Featured title';
-  const sub=heroKind==='h'
-    ? [item.duration?fmtDur(item.duration):null,item.views?`Views ${fmtViews(item.views)}`:null,(item.tags||[]).slice(0,2).join(', ')]
-    : [item.type,item.sub?`Sub ${item.sub}`:null,item.dub?`Dub ${item.dub}`:null,item.titleJP];
+  const sub=[item.type,item.sub?`Sub ${item.sub}`:null,item.dub?`Dub ${item.dub}`:null,item.titleJP];
   const safe=(item.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  const primary=heroKind==='h'?`hOpenModal('${safe}')`:`openModal('${safe}')`;
-  const secondary=heroKind==='h'?`hLoadSec('trending')`:`loadSec('popular')`;
+  const primary=`openModal('${safe}')`;
+  const secondary=`loadSec('popular')`;
   const position=`${heroIndex+1} of ${heroItems.length}`;
-  const extra=heroKind==='h'
-    ? [`ID ${item.id||'N/A'}`, item.likes?`Likes ${fmtViews(item.likes)}`:null, position]
-    : [item.slug?`Slug ${item.slug}`:null, item.sub||item.dub?`${(item.sub||0)+(item.dub||0)} listed episodes`:null, position];
+  const extra=[item.slug?`Slug ${item.slug}`:null, item.sub||item.dub?`${(item.sub||0)+(item.dub||0)} listed episodes`:null, position];
   return `<section class="hero" id="hero">
     <div class="hero-bg" style="background-image:url('${img}')"></div>
     <div class="hero-inner">
       <div class="hero-copy">
-        <div class="hero-kicker">${heroKind==='h'?'Featured 18+':'Featured Anime'}</div>
+        <div class="hero-kicker">Featured Anime</div>
         <div class="hero-title">${title}</div>
         <div class="hero-meta">${sub.filter(Boolean).slice(0,4).map(x=>`<span>${x}</span>`).join('')}</div>
         <div class="hero-meta">${extra.filter(Boolean).slice(0,3).map(x=>`<span>${x}</span>`).join('')}</div>
@@ -1109,8 +987,6 @@ async function goHome(){
   currentSection='home'; currentPage=1;
   document.querySelectorAll('.nbtns button').forEach(b=>b.classList.remove('on'));
 
-  if(mode==='h'){ hGoHome(loadId); return; }
-
   const c=document.getElementById('home-content');
   c.innerHTML=`
     <div class="sec-hd"><h2>Recent Updates</h2></div>
@@ -1119,11 +995,11 @@ async function goHome(){
     <div class="grid" id="g-pop">${skels()}</div>`;
   try{
     const d=await api('/api/all');
-    if(loadId!==homeLoadId || mode!=='anime') return;
+    if(loadId!==homeLoadId) return;
     const recent=(d.data.recent?.length?d.data.recent:d.data.latest)||[];
     const popular=d.data.popular||[];
     c.innerHTML=`
-      ${heroHTML(popular.length?popular:recent,'anime')}
+      ${heroHTML(popular.length?popular:recent)}
       <div class="sec-hd"><h2>Recent Updates</h2></div>
       <div class="grid" id="g-recent"></div>
       ${loadMoreButton('home-recent')}
@@ -1133,7 +1009,7 @@ async function goHome(){
     setupLoadGrid('home-recent','g-recent',recent,card,24);
     setupLoadGrid('home-pop','g-pop',popular,card,24);
   }catch(e){
-    if(loadId!==homeLoadId || mode!=='anime') return;
+    if(loadId!==homeLoadId) return;
     c.innerHTML=`<div class="err-box">! ${e.message} - Is npm start running?</div>`;
   }
 }
@@ -1191,77 +1067,6 @@ async function loadGenre(id, el){
   }catch(e){ c.innerHTML=`<div class="empty">${e.message}</div>`; }
 }
 
-async function hGoHome(loadId=++homeLoadId){
-  const c=document.getElementById('home-content');
-  c.innerHTML=`
-    <div class="sec-hd"><h2>Trending</h2></div>
-    <div class="grid" id="g-trending">${skels()}</div>
-    <div class="sec-hd" style="margin-top:8px"><h2>New Releases</h2></div>
-    <div class="grid" id="g-new">${skels()}</div>`;
-  try{
-    const [tr, nw] = await Promise.all([
-      api('/api/hanime/trending?page=0'),
-      api('/api/hanime/new?page=0'),
-    ]);
-    if(loadId!==homeLoadId || mode!=='h') return;
-    const trending=tr.data||[];
-    const newest=nw.data||[];
-    c.innerHTML=`
-      ${heroHTML(trending.length?trending:newest,'h')}
-      <div class="sec-hd"><h2>Trending</h2></div>
-      <div class="grid" id="g-trending"></div>
-      ${loadMoreButton('h-home-trending')}
-      <div class="sec-hd" style="margin-top:8px"><h2>New Releases</h2></div>
-      <div class="grid" id="g-new"></div>
-      ${loadMoreButton('h-home-new')}`;
-    setupLoadGrid('h-home-trending','g-trending',trending,hCard,24);
-    setupLoadGrid('h-home-new','g-new',newest,hCard,24);
-  }catch(e){
-    if(loadId!==homeLoadId || mode!=='h') return;
-    c.innerHTML=`<div class="err-box">! ${e.message} - Is npm start running?</div>`;
-  }
-}
-
-async function hLoadSec(name, page=0){
-  stopCurrentVideo();
-  showPage('home');
-  currentSection='h-'+name; currentPage=page;
-  document.getElementById('nb-'+name)?.classList.add('on');
-  const c=document.getElementById('home-content');
-
-  if(name==='tags'){
-    c.innerHTML=`<div class="sec-hd"><h2>Browse by Tag</h2></div><div class="gpills" id="gp">${spin()}</div><div id="g-genre"></div>`;
-    try{
-      const d=await api('/api/hanime/tags');
-      document.getElementById('gp').innerHTML=d.data.map(t=>`<div class="gp" onclick="hLoadTag('${encodeURIComponent(t.text)}','${t.text.replace(/'/g,"\\'")}',this)">${t.text}</div>`).join('');
-    }catch(e){ c.innerHTML=`<div class="err-box">! ${e.message}</div>`; }
-    return;
-  }
-
-  const label=name==='trending'?'Trending':'New Releases';
-  c.innerHTML=`<div class="sec-hd"><h2>${label}</h2></div><div class="grid" id="g-main">${skels(24)}</div>`;
-  try{
-    const d=await api(`/api/hanime/${name}?page=${page}`);
-    const items=d.data||[];
-    document.getElementById('g-main').innerHTML=items.map(hCard).join('')||'<div class="empty">Nothing.</div>';
-    if(items.length>=24) c.insertAdjacentHTML('beforeend', `<div class="load-more-wrap"><button class="load-more-btn" id="lm-hsec" onclick="hLoadMoreSec('${name}',${page+1})">Load More</button></div>`);
-  }catch(e){
-    document.getElementById('g-main').innerHTML=`<div class="empty">${e.message}</div>`;
-  }
-}
-
-async function hLoadTag(encodedTag, tagName, el){
-  document.querySelectorAll('.gp').forEach(p=>p.classList.remove('on'));
-  el.classList.add('on');
-  const c=document.getElementById('g-genre');
-  c.innerHTML=`<div class="grid">${skels(14)}</div>`;
-  try{
-    const d=await api(`/api/hanime/browse?tags=${encodedTag}`);
-    const key='htag-'+encodedTag.replace(/[^a-z0-9_-]/gi,'');
-    c.innerHTML=`<div class="sec-hd"><h2>${tagName}</h2></div><div class="grid" id="g-${key}"></div>${loadMoreButton(key)}`;
-    setupLoadGrid(key,'g-'+key,d.data||[],hCard,24);
-  }catch(e){ c.innerHTML=`<div class="empty">${e.message}</div>`; }
-}
 
 const qi=document.getElementById('qi'), sdd=document.getElementById('sdd');
 let qt;
@@ -1272,7 +1077,7 @@ document.getElementById('drawer-q')?.addEventListener('keydown',e=>{
 qi.addEventListener('input',()=>{
   clearTimeout(qt); const v=qi.value.trim();
   if(!v){sdd.classList.remove('open');return;}
-  qt=setTimeout(()=>mode==='h'?hLiveSrch(v):liveSrch(v),340);
+  qt=setTimeout(()=>liveSrch(v),340);
 });
 qi.addEventListener('keydown',e=>{
   if(e.key==='Enter'){sdd.classList.remove('open');doSearch();}
@@ -1295,40 +1100,17 @@ async function liveSrch(q){
   }catch(e){sdd.innerHTML=`<div style="padding:10px;text-align:center;font-size:.78rem;color:#ef4444">${e.message}</div>`;}
 }
 
-async function hLiveSrch(q){
-  sdd.innerHTML='<div style="padding:10px;text-align:center;font-size:.78rem;color:var(--muted)">Searching...</div>';
-  sdd.classList.add('open');
-  try{
-    const d=await api(`/api/hanime/search?q=${encodeURIComponent(q)}`);
-    if(!d.data.length){sdd.innerHTML='<div style="padding:10px;text-align:center;font-size:.78rem;color:var(--muted)">No results</div>';return;}
-    sdd.innerHTML=d.data.map(v=>`
-      <div class="sdi" onclick="sdd.classList.remove('open');hOpenModal('${(v.slug||'').replace(/'/g,"\\'")}')">
-        <img src="${v.poster||v.cover||''}" onerror="this.style.opacity=0"/>
-        <div><div class="sdi-n">${v.title||''}</div>
-        <div class="sdi-s">${[v.tags?.slice(0,2).join(', '), v.duration?fmtDur(v.duration):null].filter(Boolean).join(' · ')}</div></div>
-      </div>`).join('');
-  }catch(e){sdd.innerHTML=`<div style="padding:10px;text-align:center;font-size:.78rem;color:#ef4444">${e.message}</div>`;}
-}
-
 async function doSearch(){
   const q=qi.value.trim(); if(!q)return;
   sdd.classList.remove('open'); showPage('home');
   const c=document.getElementById('home-content');
   c.innerHTML=`<div class="sec-hd"><h2>Results: "${q}"</h2></div><div class="grid" id="g-main">${skels(8)}</div>`;
   try{
-    if(mode==='h'){
-      const d=await api(`/api/hanime/search?q=${encodeURIComponent(q)}`);
-      const items=d.data||[];
-      c.innerHTML=`<div class="sec-hd"><h2>Results: "${q}"</h2></div><div class="grid" id="g-main"></div>${loadMoreButton('search-h')}`;
-      setupLoadGrid('search-h','g-main',items,hCard,24);
-      if(!items.length) document.getElementById('lm-search-h').style.display='none';
-    } else {
-      const d=await api(`/api/search?q=${encodeURIComponent(q)}`);
-      const items=d.data||[];
-      c.innerHTML=`<div class="sec-hd"><h2>Results: "${q}"</h2></div><div class="grid" id="g-main"></div>${loadMoreButton('search-anime')}`;
-      setupLoadGrid('search-anime','g-main',items,card,24);
-      if(!items.length) document.getElementById('lm-search-anime').style.display='none';
-    }
+    const d=await api(`/api/search?q=${encodeURIComponent(q)}`);
+    const items=d.data||[];
+    c.innerHTML=`<div class="sec-hd"><h2>Results: "${q}"</h2></div><div class="grid" id="g-main"></div>${loadMoreButton('search-anime')}`;
+    setupLoadGrid('search-anime','g-main',items,card,24);
+    if(!items.length) document.getElementById('lm-search-anime').style.display='none';
   }catch(e){toast(e.message,false);}
 }
 
@@ -1424,79 +1206,9 @@ async function openModal(slug){
   document.getElementById('modal-status').textContent=eps.length?`${eps.length} episodes`:'';
 }
 
-let _hModalData=null;
-
-async function hOpenModal(slug){
-  _hModalData=null;
-  document.getElementById('modal-overlay').classList.add('open');
-  document.getElementById('modal-top').innerHTML='<div class="spin" style="margin:40px auto;align-self:center;"></div>';
-  document.getElementById('modal-status').textContent='Loading...';
-
-  try{
-    const d=await api(`/api/hanime/meta/${encodeURIComponent(slug)}`);
-    const v=d.data;
-    _hModalData=v;
-    currentAnimeTitle = v.title || slug;
-
-    const tags=(v.tags||[]).map(t=>`<span class="tag a">${t.text}</span>`).join('');
-    const brands=(v.brands||[]).map(b=>`<span class="tag">${b.title}</span>`).join('');
-    const allTags=tags+(brands?`<span class="tag" style="opacity:.5">|</span>`+brands:'');
-
-    const relatedHTML=(v.related||[]).slice(0,12).map((r,i)=>`
-      <div class="ep-row" onclick="closeModal();hOpenModal('${(r.slug||'').replace(/'/g,"\\'")}')">
-        <div class="ep-n" style="width:auto;padding:0 4px;font-size:.6rem;">${fmtDur(r.duration||0)||'-'}</div>
-        <div style="flex:1;min-width:0;">
-          <div class="ep-t">${r.title||''}</div>
-          <div class="ep-sd">Views ${fmtViews(r.views||0)}</div>
-        </div>
-      </div>`).join('') || '<div class="empty" style="padding:20px;font-size:.78rem">No related.</div>';
-
-    const safeslug=(slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const detailRows=[
-      ['Duration', v.duration?fmtDur(v.duration):'-'],
-      ['Views', v.views?fmtViews(v.views):'-'],
-      ['Likes', v.likes?fmtViews(v.likes):'-'],
-      ['Brand', (v.brands||[])[0]?.title || '-'],
-      ['Franchise', v.franchise?.title || '-'],
-      ['Tags', (v.tags||[]).slice(0,3).map(t=>t.text).join(', ') || '-'],
-      ['Related', (v.related||[]).length || 0],
-      ['Slug', v.slug || slug || '-'],
-    ];
-
-    document.getElementById('modal-top').innerHTML=`
-      <div class="modal-poster"><img src="${hImg(v.poster||v.cover||'')}" onerror="this.style.opacity=0" alt=""/></div>
-      <div class="modal-info">
-        <h2>${v.title||''}</h2>
-        <div class="tags" style="margin-bottom:6px;">
-          ${v.duration?`<span class="tag">Duration ${fmtDur(v.duration)}</span>`:''}
-          ${v.views?`<span class="tag">Views ${fmtViews(v.views)}</span>`:''}
-          ${v.likes?`<span class="tag">Likes ${fmtViews(v.likes)}</span>`:''}
-        </div>
-        <div class="tags">${allTags}</div>
-        ${v.description?`<div class="synopsis">${v.description.slice(0,240)}${v.description.length>240?'…':''}</div>`:''}
-        ${v.franchise?`<div class="meta-g" style="margin-top:6px;"><span><b>Franchise:</b> ${v.franchise.title}</span></div>`:''}
-        <div class="detail-panel">
-          <div class="detail-title">Details</div>
-          <div class="detail-grid">
-            ${detailRows.map(([k,val])=>`<div class="detail-row"><b>${k}</b><span title="${val}">${val}</span></div>`).join('')}
-          </div>
-        </div>
-        <button class="watch-now-btn" onclick="closeModal();hStartWatch('${safeslug}')">Watch Now</button>
-      </div>
-      <div class="modal-eps">
-        <div class="modal-eps-hd">Related (${(v.related||[]).length})</div>
-        <div class="modal-eps-list">${relatedHTML}</div>
-      </div>`;
-    document.getElementById('modal-status').textContent='Fast preview';
-  }catch(e){
-    document.getElementById('modal-top').innerHTML=`<div class="err-box" style="margin:20px">! ${e.message}</div>`;
-    document.getElementById('modal-status').textContent='';
-  }
-}
-
 function closeModal(){
   document.getElementById('modal-overlay').classList.remove('open');
-  _modalSlug=null; _hModalData=null;
+  _modalSlug=null;
 }
 function watchFromModal(epIdx){
   closeModal();
@@ -1539,21 +1251,31 @@ async function selectEp(idx){
     const d=await api(`/api/servers?key=${encodeURIComponent(ep.serverKey)}`);
     currentSvs=d.data;
     renderServers(currentSvs);
-    const firstSub=currentSvs.findIndex(s=>s.type==='sub');
-    selectServer(firstSub>=0?firstSub:0);
+    const firstIdx=currentSvs.findIndex(s=>s.type===currentAudioType);
+    selectServer(firstIdx>=0?firstIdx:0);
   }catch(e){
     document.getElementById('player').innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>${e.message}</div></div>`;
     toast(e.message,false);
   }
 }
 
-function renderServers(svs){
-  const sub=svs.filter(s=>s.type==='sub');
-  const dub=svs.filter(s=>s.type==='dub');
-  let h='';
-  if(sub.length) h+=`<div class="sv-grp"><div class="sv-lbl">Sub</div><div class="sv-row">${sub.map(s=>{const i=svs.indexOf(s);return`<button class="sv-btn sub" id="sv-${i}" onclick="selectServer(${i})">${s.name}</button>`;}).join('')}</div></div>`;
-  if(dub.length) h+=`<div class="sv-grp"><div class="sv-lbl">Dub</div><div class="sv-row">${dub.map(s=>{const i=svs.indexOf(s);return`<button class="sv-btn dub" id="sv-${i}" onclick="selectServer(${i})">${s.name}</button>`;}).join('')}</div></div>`;
+let currentAudioType='sub';
+
+function renderServers(svs, preferType){
+  const hasSub=svs.some(s=>s.type==='sub');
+  const hasDub=svs.some(s=>s.type==='dub');
+  currentAudioType=preferType||(hasSub?'sub':'dub');
+  if(currentAudioType==='sub'&&!hasSub) currentAudioType='dub';
+  if(currentAudioType==='dub'&&!hasDub) currentAudioType='sub';
+  const list=svs.filter(s=>s.type===currentAudioType);
+  const h=`<div class="sv-row">${list.map(s=>{const i=svs.indexOf(s);return`<button class="sv-btn ${s.type}" id="sv-${i}" onclick="selectServer(${i})">${s.name}</button>`;}).join('')}</div>`;
   document.getElementById('servers').innerHTML=h;
+}
+
+function switchAudioType(type){
+  renderServers(currentSvs, type);
+  const idx=currentSvs.findIndex(s=>s.type===type);
+  if(idx>=0) selectServer(idx);
 }
 
 async function selectServer(idx){
@@ -1570,11 +1292,12 @@ async function selectServer(idx){
     const embedUrl=srcD.data?.url; if(!embedUrl) throw new Error('No embed URL');
     const playerD=await api(`/api/player?url=${encodeURIComponent(embedUrl)}`);
     const m3u8=playerD.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
-    const pm=apiUrl(`/api/hls?url=${encodeURIComponent(m3u8)}`);
+    const refQ=`&ref=${encodeURIComponent(embedUrl)}`;
+    const pm=apiUrl(`/api/hls?url=${encodeURIComponent(m3u8)}${refQ}`);
     const ep=currentEps[activeEpIdx]||{};
     const baseName=safeFileName(`${currentAnimeTitle||currentSlug||'anime'} episode ${ep.epNum||activeEpIdx+1}`);
     const downloadUrl=apiUrl(`/api/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(baseName)}`);
-    const ps=(playerD.subtitles||[]).map(s=>({...s,url:apiUrl(`/api/hls?url=${encodeURIComponent(s.url)}`)}));
+    const ps=(playerD.subtitles||[]).map(s=>({...s,url:apiUrl(`/api/hls?url=${encodeURIComponent(s.url)}${refQ}`)}));
     playHLS(pm, ps, playerD.intro, playerD.outro, badge);
     setDownload(downloadUrl, 'HD Download', `Full video MP4 (${sv.type.toUpperCase()} - ${sv.name})`, `6Stream-jhamesmartin-${baseName}.mp4`);
     toast(`${sv.name} (${sv.type.toUpperCase()})`, true);
@@ -1584,126 +1307,6 @@ async function selectServer(idx){
   }
 }
 
-async function hStartWatch(slug){
-  stopCurrentVideo();
-  clearDownload();
-  showPage('watch');
-  document.getElementById('watch-err').innerHTML='';
-  document.getElementById('watch-title').textContent='Loading video...';
-  document.getElementById('player').innerHTML=playerSkeleton('Preparing clean player...');
-  document.getElementById('servers').innerHTML=serverSkeleton();
-  document.getElementById('w-ep-title').textContent='Related';
-  document.getElementById('w-ep-list').innerHTML='';
-  try{
-    const d=await api(`/api/hanime/video/${encodeURIComponent(slug)}`);
-    hWatchPage(d.data);
-  }catch(e){
-    document.getElementById('player').innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>${e.message}</div></div>`;
-    toast(e.message,false);
-  }
-}
-
-function hWatchPage(data){
-  stopCurrentVideo();
-  clearDownload();
-  hCurrentSources=data.sources||[];
-  hCurrentRelated=data.related||[];
-  showPage('watch');
-  document.getElementById('watch-err').innerHTML='';
-  document.getElementById('watch-title').textContent=data.title||'';
-  document.getElementById('player').innerHTML='<div class="player-msg"><div class="pi">Play</div><div>Select quality</div></div>';
-
-  // Quality selector
-  const hlsSrcs    = hCurrentSources.filter(s=>s.kind==='hls');
-  const directSrcs = hCurrentSources.filter(s=>s.kind==='mp4'||s.kind==='direct');
-  let svHTML='';
-  if(hlsSrcs.length){
-    svHTML+=`<div class="sv-grp"><div class="sv-lbl">Stream</div><div class="sv-row">`;
-    hlsSrcs.forEach(s=>{
-      const gi=hCurrentSources.indexOf(s);
-      svHTML+=`<button class="sv-btn hls" id="hsv-${gi}" onclick="hSelectSource(${gi})">${s.quality}</button>`;
-    });
-    svHTML+=`</div></div>`;
-  }
-  if(directSrcs.length){
-    svHTML+=`<div class="sv-grp"><div class="sv-lbl">Direct</div><div class="sv-row">`;
-    directSrcs.forEach(s=>{
-      const gi=hCurrentSources.indexOf(s);
-      svHTML+=`<button class="sv-btn mp4" id="hsv-${gi}" onclick="hSelectSource(${gi})">${s.quality}</button>`;
-    });
-    svHTML+=`</div></div>`;
-  }
-  if(!hCurrentSources.length) {
-    const err = data.sourceError ? ` Source scrape failed: ${data.sourceError}` : '';
-    svHTML=`<div class="empty" style="padding:8px;">No sources found.${err}</div>`;
-  }
-  document.getElementById('servers').innerHTML=svHTML;
-
-  // Related sidebar
-  document.getElementById('w-ep-title').textContent=`Related (${hCurrentRelated.length})`;
-  document.getElementById('w-ep-list').innerHTML=hCurrentRelated.slice(0,20).map(r=>`
-    <div class="rel-item" onclick="hOpenModal('${(r.slug||'').replace(/'/g,"\\'")}')">
-      <div class="rel-thumb"><img src="${hImg(r.poster||r.cover||'')}" loading="lazy" onerror="this.style.opacity=0"/></div>
-      <div class="rel-info">
-        <div class="rel-title">${r.title||''}</div>
-        <div class="rel-meta">${r.duration?fmtDur(r.duration):''} ${r.views?'· Views '+fmtViews(r.views):''}</div>
-      </div>
-    </div>`).join('') || '<div class="empty" style="padding:16px;font-size:.78rem">No related.</div>';
-
-  // Auto-select: prefer direct files first, then real scraped HLS streams.
-  if(hCurrentSources.length){
-    let preferred = hCurrentSources.findIndex(s=>s.kind==='mp4'||s.kind==='direct');
-    if(preferred<0) preferred = hCurrentSources.findIndex(s=>s.kind==='hls');
-    hSelectSource(preferred>=0?preferred:0);
-  }
-}
-
-function hSelectSource(idx){
-  stopCurrentVideo();
-  clearDownload();
-  const src=hCurrentSources[idx]; if(!src) return;
-  document.querySelectorAll('[id^=hsv-]').forEach(b=>b.classList.remove('on'));
-  document.getElementById('hsv-'+idx)?.classList.add('on');
-
-  const wrap=document.getElementById('player');
-  const baseName=safeFileName(document.getElementById('watch-title')?.textContent||'hanime-video');
-
-  if(src.kind==='mp4'){
-    wrap.innerHTML=`<video id="hv" autoplay playsinline style="width:100%;height:100%;background:#000;">
-      <source src="${src.url}" type="video/mp4">
-    </video>
-    <div class="watch-type-badge mp4">MP4</div>`;
-    enhanceVideo('hv');
-    document.getElementById('hv')?.play().catch(()=>{});
-    const mp4DlUrl=apiUrl(`/api/dl?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent('6Stream-jhamesmartin-'+baseName+'.mp4')}`);
-    setDownload(mp4DlUrl,'HD Download','Direct MP4 source',`6Stream-jhamesmartin-${baseName}.mp4`);
-    toast('MP4 stream', true);
-
-  } else if(src.kind==='direct'){
-    wrap.innerHTML=`<div class="player-msg">
-      <div class="pi" style="font-size:1.5rem">⬇</div>
-      <div style="margin-bottom:8px">Direct download link</div>
-      <a href="${src.url}" target="_blank" rel="noopener"
-         style="background:var(--accent);color:#fff;padding:8px 18px;border-radius:7px;font-size:.84rem;text-decoration:none;font-weight:700;">Open Download</a>
-    </div>`;
-    setDownload(src.url,'Download','Direct source',`6Stream-jhamesmartin-${baseName}`);
-    toast('Download link ready', true);
-
-  } else if(src.kind==='hls'){
-    if(!src.url.startsWith('http')){
-      toast('Invalid stream URL', false);
-      return;
-    }
-    const proxied = apiUrl(`/api/hls?url=${encodeURIComponent(src.url)}`);
-    playHLS(proxied, [], null, null, {label: src.quality || 'HLS', cls:'hls'});
-    const downloadUrl = apiUrl(`/api/hls-download?url=${encodeURIComponent(src.url)}&name=${encodeURIComponent(baseName)}`);
-    setDownload(downloadUrl, 'HD Download', `Full video MP4 (${src.quality || 'HLS'})`, `6Stream-jhamesmartin-${baseName}.mp4`);
-    toast(`${src.quality || 'HLS'} stream`, true);
-
-  } else {
-    toast('Unknown source type', false);
-  }
-}
 
 function ico(name){
   const icons={
@@ -1737,6 +1340,10 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
       <select class="vc-quality" aria-label="Quality" style="display:none">
         <option value="-1">Auto</option>
       </select>
+      <select class="vc-audio" aria-label="Audio" style="display:none">
+        <option value="sub">Audio: Sub</option>
+        <option value="dub">Audio: Dub</option>
+      </select>
       <select class="vc-speed" aria-label="Playback speed">
         <option value="0.5">0.5x</option>
         <option value="0.75">0.75x</option>
@@ -1767,9 +1374,22 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
   const volume=controls.querySelector('.vc-vol');
   const time=controls.querySelector('.vc-time');
   const qualSel=controls.querySelector('.vc-quality');
+  const audioSel=controls.querySelector('.vc-audio');
   const speed=controls.querySelector('.vc-speed');
   const subSel=controls.querySelector('.vc-sub');
   const fullBtn=controls.querySelector('.vc-full');
+
+  if(audioSel){
+    const hasSub=currentSvs.some(s=>s.type==='sub');
+    const hasDub=currentSvs.some(s=>s.type==='dub');
+    if(hasSub&&hasDub){
+      audioSel.style.display='';
+      audioSel.value=currentAudioType;
+      audioSel.onchange=()=>switchAudioType(audioSel.value);
+    } else {
+      audioSel.style.display='none';
+    }
+  }
   let seeking=false;
   let idleTimer=null;
   let lastTrackCount=-1;
@@ -2014,8 +1634,6 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
         const nextIdx=activeEpIdx+1;
         if(nextIdx<currentEps.length) showAutoNext(nextIdx);
         else showEndOfSeries();
-      } else if(hCurrentRelated && hCurrentRelated.length>0){
-        showHanimeEndCard();
       }
     };
     showRatingPopup(animeTitle, epLabel, afterRating);
@@ -2095,8 +1713,21 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
       enhanceVideo('hv', hls, badge);
       v.play().catch(()=>{});
     });
+    let hlsRetried=false;
     hls.on(Hls.Events.ERROR,(_,d)=>{
-      if(d.fatal) wrap.innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>HLS error: ${d.type}</div></div>`;
+      console.warn('[HLS]',d.type,d.details,d.fatal?'(fatal)':'');
+      if(!d.fatal) return;
+      if(d.type===Hls.ErrorTypes.NETWORK_ERROR && !hlsRetried){
+        hlsRetried=true;
+        hls.startLoad();
+        return;
+      }
+      if(d.type===Hls.ErrorTypes.MEDIA_ERROR && !hlsRetried){
+        hlsRetried=true;
+        hls.recoverMediaError();
+        return;
+      }
+      wrap.innerHTML=`<div class="player-msg err"><div class="pi">!</div><div>HLS error: ${d.type}${d.details?' ('+d.details+')':''}</div></div>`;
     });
   } else if(v.canPlayType('application/vnd.apple.mpegurl')){
     v.src=m3u8Url; enhanceVideo('hv', null, badge); v.play().catch(()=>{});
@@ -2168,7 +1799,7 @@ document.getElementById('mob-srch-input')?.addEventListener('input',e=>{
   if(!v){ sdd.classList.remove('open'); return; }
   qi.value=v;
   clearTimeout(qt);
-  qt=setTimeout(()=>mode==='h'?hLiveSrch(v):liveSrch(v),340);
+  qt=setTimeout(()=>liveSrch(v),340);
 });
 
 
@@ -2236,23 +1867,19 @@ async function loadTop10(){
   stopCurrentVideo();
   showPage('home');
   document.querySelectorAll('.nbtns button').forEach(b=>b.classList.remove('on'));
-  document.getElementById(mode==='h'?'nb-htop10':'nb-top10')?.classList.add('on');
+  document.getElementById('nb-top10')?.classList.add('on');
   const c=document.getElementById('home-content');
-  c.innerHTML=`<div class="sec-hd"><h2>🏆 Top 10 ${mode==='h'?'18+':'Anime'}</h2></div><div id="t10-list">${spin()}</div>`;
+  c.innerHTML=`<div class="sec-hd"><h2>🏆 Top 10 Anime</h2></div><div id="t10-list">${spin()}</div>`;
   try{
-    const d=mode==='h'
-      ? await api('/api/hanime/trending?page=0&per_page=10')
-      : await api('/api/popular?page=1');
+    const d=await api('/api/popular?page=1');
     const items=(d.data||[]).slice(0,10);
     document.getElementById('t10-list').innerHTML=items.map((item,i)=>{
       const n=i+1;
       const rc=n===1?'g':n===2?'s':n===3?'b':'';
-      const img=mode==='h'?hImg(item.poster||item.cover||''):(item.poster||'');
-      const meta=mode==='h'
-        ?[item.duration?fmtDur(item.duration):null,item.views?fmtViews(item.views)+' views':null].filter(Boolean).join(' · ')
-        :[item.type,item.score?'Score '+item.score:null].filter(Boolean).join(' · ');
+      const img=item.poster||'';
+      const meta=[item.type,item.score?'Score '+item.score:null].filter(Boolean).join(' · ');
       const safe=(item.slug||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      const click=mode==='h'?`hOpenModal('${safe}')`:`openModal('${safe}')`;
+      const click=`openModal('${safe}')`;
       return `<div class="t10-item" onclick="${click}">
         <div class="t10-rank ${rc}">${n}</div>
         <img class="t10-img" src="${img}" loading="lazy" onerror="this.style.opacity=0"/>
@@ -2325,31 +1952,6 @@ function showEndOfSeries() {
     <div class="an-btns" style="margin-top:14px;">
       <button class="an-btn" onclick="cancelAutoNext()">Stay</button>
       <button class="an-btn primary" onclick="cancelAutoNext();goHome()">Find New Anime</button>
-    </div>
-  </div>`;
-  wrap.appendChild(overlay);
-}
-
-function showHanimeEndCard() {
-  const wrap = document.getElementById('player');
-  if (!wrap) return;
-  cancelAutoNext();
-  const related = (hCurrentRelated || []).slice(0, 3);
-  const overlay = document.createElement('div');
-  overlay.className = 'auto-next-overlay';
-  overlay.innerHTML = `<div class="auto-next-card" style="max-width:300px;">
-    <div class="an-label" style="color:var(--accent2)">Video Ended</div>
-    <div class="an-ep">Watch something related?</div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin:10px 0;">
-      ${related.map(r => `<div onclick="cancelAutoNext();hOpenModal('${(r.slug||'').replace(/'/g,"\\'")}');"
-        style="display:flex;gap:8px;align-items:center;padding:7px 9px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:var(--bg3);">
-        <img src="${hImg(r.poster||r.cover||'')}" style="width:44px;height:30px;object-fit:cover;border-radius:4px;flex-shrink:0;" onerror="this.style.opacity=0"/>
-        <div style="flex:1;min-width:0;font-size:.74rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;">${r.title||''}</div>
-      </div>`).join('')}
-    </div>
-    <div class="an-btns">
-      <button class="an-btn" onclick="cancelAutoNext()">Dismiss</button>
-      <button class="an-btn primary" onclick="cancelAutoNext();goHome()">Browse</button>
     </div>
   </div>`;
   wrap.appendChild(overlay);
