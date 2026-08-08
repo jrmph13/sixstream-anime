@@ -9,19 +9,25 @@
  */
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { generateApiKey, isValidKey } = require("./api-encrypt");
 
-// Data file path
-const DATA_DIR = path.join(__dirname, "admin-data");
+// Data file path — serverless platforms (Vercel) only allow writes under os.tmpdir();
+// data there is ephemeral (wiped on cold start) since there's no persistent disk.
+const DATA_DIR = process.env.VERCEL
+  ? path.join(os.tmpdir(), "6stream-admin-data")
+  : path.join(__dirname, "admin-data");
 const KEYS_FILE = path.join(DATA_DIR, "api-keys.json");
 const LOGS_FILE = path.join(DATA_DIR, "usage-logs.json");
 const BANNED_FILE = path.join(DATA_DIR, "banned-keys.json");
 
 // Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) { console.error("[admin] Failed to create data dir:", e.message); }
 
 // ── In-memory stores ──────────────────────────────────────────────────────────
 let apiKeys = {};   // keyHash -> { label, created, key (partial), isAdmin, blocked }
