@@ -262,6 +262,12 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 /* Fullscreen watermark — top-right, slightly bigger */
 .player-box:fullscreen::after,.player-box:-webkit-full-screen::after,.player-box.is-fullscreen::after{top:clamp(14px,2vh,28px);right:clamp(16px,2.5vw,36px);font-size:clamp(.9rem,1.6vw,1.5rem);color:rgba(255,255,255,.22);}
 
+/* UI chrome (badges, buttons, time, welcome text) stays legible — system font, bold,
+   not the decorative Nightin Tokyo display font used for the rest of the site. */
+.watch-type-badge,.watch-type-inline,.vc-type,.vc-time,.vc-speed,.vc-sub,.vc-quality,.vc-audio,
+.sv-btn,.download-btn,.welcome-copy b,.welcome-copy span{
+  font-family:'Segoe UI',sans-serif;font-weight:700;
+}
 .watch-type-badge{position:absolute;top:10px;left:10px;z-index:19;padding:5px 9px;border-radius:999px;background:rgba(15,23,42,.78);border:1px solid rgba(255,255,255,.16);font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(6px);}
 .watch-type-inline{display:inline-flex;vertical-align:middle;margin-left:8px;padding:3px 8px;border-radius:999px;background:var(--bg3);border:1px solid var(--border);font-size:.68rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;}
 .watch-type-inline.sub{color:#6ee7b7;border-color:rgba(16,185,129,.55);}
