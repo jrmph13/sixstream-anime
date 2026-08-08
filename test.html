@@ -142,14 +142,14 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 
 /* WELCOME BANNER */
 .welcome-banner{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;animation:heroIn .3s ease both;}
-.welcome-gif{width:56px;height:56px;object-fit:contain;border-radius:10px;flex-shrink:0;}
+.welcome-gif{width:88px;height:88px;object-fit:cover;border-radius:12px;flex-shrink:0;}
 .welcome-copy{flex:1;min-width:0;}
 .welcome-copy b{display:block;font-size:.92rem;color:var(--text);margin-bottom:2px;}
 .welcome-copy span{font-size:.76rem;color:var(--muted);}
 .welcome-close{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .18s;}
 .welcome-close:hover{border-color:var(--accent);color:var(--text);}
 .welcome-close svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.3;stroke-linecap:round;}
-@media(max-width:520px){.welcome-gif{width:44px;height:44px;}.welcome-copy b{font-size:.85rem;}.welcome-copy span{font-size:.7rem;}}
+@media(max-width:520px){.welcome-gif{width:64px;height:64px;}.welcome-copy b{font-size:.85rem;}.welcome-copy span{font-size:.7rem;}}
 
 /* SECTION */
 .sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
@@ -187,7 +187,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 @keyframes shine{0%{background-position:180% 0}100%{background-position:-80% 0}}
 @keyframes shimmer{to{transform:translateX(100%)}}
 .spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:rot .7s linear infinite;margin:28px auto;}
-.spin-gif{display:block;width:56px;height:56px;object-fit:contain;margin:20px auto;}
+.spin-gif{display:block;width:88px;height:88px;object-fit:contain;margin:20px auto;align-self:center;}
 @keyframes rot{to{transform:rotate(360deg)}}
 
 /* PAGINATION */
@@ -608,7 +608,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 
   <div class="theme-toggle">
     <button class="theme-btn" id="th-dark" onclick="setTheme('dark')">Dark</button>
-    <button class="theme-btn" id="th-light" onclick="setTheme('light')">Cream</button>
+    <button class="theme-btn" id="th-light" onclick="setTheme('light')">Light</button>
   </div>
 
   <div class="sb">
@@ -647,7 +647,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
       <div class="drawer-label">Theme</div>
       <div class="theme-toggle">
         <button class="theme-btn" id="d-th-dark" onclick="setTheme('dark')">Dark</button>
-        <button class="theme-btn" id="d-th-light" onclick="setTheme('light')">Cream</button>
+        <button class="theme-btn" id="d-th-light" onclick="setTheme('light')">Light</button>
       </div>
     </div>
     <div class="drawer-block">
