@@ -259,18 +259,23 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 .player-box:not(.controls-idle):focus-within .video-controls{opacity:1;}
 .vc-progress{width:100%;accent-color:var(--accent);cursor:pointer;height:4px;margin-bottom:2px;}
 .vc-row{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;min-width:0;}
-.vc-btn{flex-shrink:0;width:34px;height:34px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.82);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;}
+.vc-btn{flex-shrink:0;width:34px;height:34px;border-radius:7px;border:1px solid rgba(255,255,255,.18);background:rgba(15,23,42,.82);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation;transition:background .18s ease,transform .12s ease,box-shadow .18s ease;}
 .vc-btn svg{width:16px;height:16px;display:block;stroke:currentColor;fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;}
-.vc-btn:hover,.vc-btn:active{background:var(--accent);}
+.vc-btn:hover{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent);}
+.vc-btn:active{background:var(--accent);transform:scale(.88);}
 .vc-time{font-size:.68rem;color:#e5e7eb;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;}
 .vc-vol{width:70px;accent-color:var(--accent);flex-shrink:0;}
 /* type badge inside controls — shows Sub/Dub/HLS */
-.vc-type{flex-shrink:0;padding:3px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.22);font-size:.6rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#e5e7eb;background:rgba(15,23,42,.72);white-space:nowrap;}
+.vc-type{flex-shrink:0;padding:3px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.22);font-size:.6rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#e5e7eb;background:rgba(15,23,42,.72);white-space:nowrap;animation:typeBadgeIn .3s ease;}
 .vc-type.sub{color:#6ee7b7;border-color:rgba(16,185,129,.6);}
 .vc-type.dub{color:#93c5fd;border-color:rgba(59,130,246,.6);}
+@keyframes typeBadgeIn{from{opacity:0;transform:translateY(-4px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
 .vc-spacer{flex:1;min-width:0;}
-.vc-speed,.vc-sub,.vc-quality,.vc-audio{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 6px;font-size:.72rem;outline:none;flex-shrink:0;max-width:90px;}
+.vc-speed,.vc-sub,.vc-quality,.vc-audio{background:rgba(15,23,42,.86);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:6px;padding:5px 6px;font-size:.72rem;outline:none;flex-shrink:0;max-width:90px;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .12s ease;}
+.vc-speed:hover,.vc-sub:hover:not(:disabled),.vc-quality:hover,.vc-audio:hover{border-color:var(--accent);}
+.vc-speed:focus-visible,.vc-sub:focus-visible,.vc-quality:focus-visible,.vc-audio:focus-visible{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent);}
 .vc-sub:disabled{display:none;}
+.vc-audio{animation:typeBadgeIn .3s ease;}
 
 /* SUBTITLE POSITION — stays above controls, works in fullscreen */
 .player-box video::cue{background:rgba(0,0,0,.72);color:#fff;font-size:clamp(.8rem,2.4cqw,1.1rem);line-height:1.4;}
@@ -297,12 +302,14 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 .player-msg.err .pi{color:#ef4444;}
 .sv-grp{margin:10px 0 4px;}
 .sv-lbl{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--muted);margin-bottom:6px;}
-.sv-row{display:flex;flex-wrap:wrap;gap:6px;}
+.sv-row{display:flex;flex-wrap:wrap;gap:6px;animation:svRowIn .25s ease;}
 .sv-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);cursor:pointer;font-size:.77rem;transition:all .2s;}
-.sv-btn:hover{border-color:var(--accent);color:var(--text);}
+.sv-btn:hover{border-color:var(--accent);color:var(--text);transform:translateY(-1px);}
+.sv-btn:active{transform:translateY(0) scale(.96);}
 .sv-btn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
 .sv-btn.sub.on{background:#065f46;border-color:#10b981;color:#6ee7b7;}
 .sv-btn.dub.on{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd;}
+@keyframes svRowIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .sv-btn.hls.on{background:#065f46;border-color:#10b981;color:#6ee7b7;}
 .sv-btn.mp4.on{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd;}
 .download-panel{margin-top:10px;border:1px solid var(--border);background:var(--bg2);border-radius:8px;padding:10px;display:none;align-items:center;justify-content:space-between;gap:10px;}
@@ -652,6 +659,13 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
           <span>BSIS student, 19 years old.</span>
           <span>Makati Science Institute of the Philippines.</span>
           <em class="about-pill">Made by</em>
+        </div>
+      </div>
+      <div class="about-card" style="margin-top:10px;">
+        <img class="about-avatar" src="https://i.ibb.co/Q3nBBKyR/IMG-20260803-225920.jpg" alt="Partner" loading="lazy" onerror="this.style.opacity=0">
+        <div class="about-copy">
+          <b>I love my partner</b>
+          <em class="about-pill" style="background:rgba(236,72,153,.13);border-color:rgba(236,72,153,.35);color:#f472b6;">❤</em>
         </div>
       </div>
     </div>
@@ -1288,17 +1302,16 @@ async function selectServer(idx){
     : {label:'Sub', cls:'sub'};
   document.getElementById('player').innerHTML=playerSkeleton(`Getting ${badge.label} stream...`);
   try{
-    const srcD=await api(`/api/source/${encodeURIComponent(sv.linkId)}`);
-    const embedUrl=srcD.data?.url; if(!embedUrl) throw new Error('No embed URL');
-    const playerD=await api(`/api/player?url=${encodeURIComponent(embedUrl)}`);
-    const m3u8=playerD.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
+    const d=await api(`/api/stream/${encodeURIComponent(sv.linkId)}`);
+    const embedUrl=d.embedUrl; if(!embedUrl) throw new Error('No embed URL');
+    const m3u8=d.sources?.[0]?.url; if(!m3u8) throw new Error('No stream found');
     const refQ=`&ref=${encodeURIComponent(embedUrl)}`;
     const pm=apiUrl(`/api/hls?url=${encodeURIComponent(m3u8)}${refQ}`);
     const ep=currentEps[activeEpIdx]||{};
     const baseName=safeFileName(`${currentAnimeTitle||currentSlug||'anime'} episode ${ep.epNum||activeEpIdx+1}`);
     const downloadUrl=apiUrl(`/api/hls-download?url=${encodeURIComponent(m3u8)}&name=${encodeURIComponent(baseName)}`);
-    const ps=(playerD.subtitles||[]).map(s=>({...s,url:apiUrl(`/api/hls?url=${encodeURIComponent(s.url)}${refQ}`)}));
-    playHLS(pm, ps, playerD.intro, playerD.outro, badge);
+    const ps=(d.subtitles||[]).map(s=>({...s,url:apiUrl(`/api/hls?url=${encodeURIComponent(s.url)}${refQ}`)}));
+    playHLS(pm, ps, d.intro, d.outro, badge, idx);
     setDownload(downloadUrl, 'HD Download', `Full video MP4 (${sv.type.toUpperCase()} - ${sv.name})`, `6Stream-jhamesmartin-${baseName}.mp4`);
     toast(`${sv.name} (${sv.type.toUpperCase()})`, true);
   }catch(e){
@@ -1646,7 +1659,7 @@ function enhanceVideo(videoId='hv', hlsInstance=null, badge=null){
 
 let _activeHls = null;
 
-function playHLS(m3u8Url, subs, intro, outro, badge=null){
+function playHLS(m3u8Url, subs, intro, outro, badge=null, serverIdx=null){
   stopCurrentVideo();
   const wrap=document.getElementById('player');
   const escAttr=value=>String(value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1713,17 +1726,25 @@ function playHLS(m3u8Url, subs, intro, outro, badge=null){
       enhanceVideo('hv', hls, badge);
       v.play().catch(()=>{});
     });
-    let hlsRetried=false;
+    let hlsResourceRetried=false, hlsResourceRefetched=false, hlsMediaRetried=false;
     hls.on(Hls.Events.ERROR,(_,d)=>{
       console.warn('[HLS]',d.type,d.details,d.fatal?'(fatal)':'');
       if(!d.fatal) return;
-      if(d.type===Hls.ErrorTypes.NETWORK_ERROR && !hlsRetried){
-        hlsRetried=true;
-        hls.startLoad();
-        return;
+      if(d.type===Hls.ErrorTypes.NETWORK_ERROR){
+        if(!hlsResourceRetried){
+          hlsResourceRetried=true;
+          hls.startLoad();
+          return;
+        }
+        if(!hlsResourceRefetched && Number.isInteger(serverIdx)){
+          hlsResourceRefetched=true;
+          toast('Link expired — fetching a fresh one...', false);
+          selectServer(serverIdx);
+          return;
+        }
       }
-      if(d.type===Hls.ErrorTypes.MEDIA_ERROR && !hlsRetried){
-        hlsRetried=true;
+      if(d.type===Hls.ErrorTypes.MEDIA_ERROR && !hlsMediaRetried){
+        hlsMediaRetried=true;
         hls.recoverMediaError();
         return;
       }

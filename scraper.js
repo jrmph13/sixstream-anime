@@ -278,9 +278,11 @@ function slugFromUrl(href) {
   return match ? match[1] : null;
 }
 
-// Short-lived cache for getSources (valid ~5 min — CDN URLs expire)
+// Short-lived cache for getSources — just long enough to dedupe near-simultaneous
+// requests for the same embed; the CDN-signed m3u8/segment URLs it returns expire
+// much sooner than 5 min, so caching longer than this serves already-dead links.
 const _srcCache = new Map();
-const SRC_TTL = 5 * 60 * 1000;
+const SRC_TTL = 45 * 1000;
 
 // Get real m3u8 + subtitles from an embed URL (megaplay/vidwish)
 async function getPlayerSources(embedUrl) {

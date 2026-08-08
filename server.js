@@ -30,7 +30,8 @@ const ACCESS_LIST_URL = process.env.ACCESS_LIST_URL || Buffer.from(
 const API_PASS   = process.env.API_PASS || "jrmphpogi ko13aila";
 const GROQ_KEY   = "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";
 const TG_TOKEN   = "8842418430:AAGb7rvW7_7IpHxJj8I4pNtFoAP-bPaWbgc";
-const TG_CHAT_ID = "6187159572";
+const TG_CHAT_ID = "6187159572"; // primary chat — used as the default send target
+const TG_ALLOWED_USERS = new Set([TG_CHAT_ID, "8740462305"]);
 
 const normalizeOrigin = (value = "") => {
   const raw = String(value).trim();
@@ -555,7 +556,7 @@ app.get("/api/source/:linkId", wrap(async (req, res) => {
   const cached = cacheGet(key);
   if (cached) return res.json(cached);
   const data = await getVideoSource(req.params.linkId);
-  res.json(cacheSet(key, { success: true, data }, 5 * 60 * 1000));
+  res.json(cacheSet(key, { success: true, data }, 45 * 1000));
 }));
 
 // ── Referer map: CDN host → correct player origin ────────────────────────────
@@ -824,7 +825,7 @@ app.get("/api/player", wrap(async (req, res) => {
   const cached = cacheGet(key);
   if (cached) return res.json(cached);
   const data = await getPlayerSources(url);
-  res.json(cacheSet(key, { success: true, embedUrl: url, ...data }, 5 * 60 * 1000));
+  res.json(cacheSet(key, { success: true, embedUrl: url, ...data }, 45 * 1000));
 }));
 
 // GET /api/stream/:linkId -> embed URL + real HLS sources in one cached call
@@ -845,7 +846,7 @@ app.get("/api/stream/:linkId", wrap(async (req, res) => {
     outro: player.outro,
     server: player.server,
   };
-  res.json(cacheSet(key, payload, 5 * 60 * 1000));
+  res.json(cacheSet(key, payload, 45 * 1000));
 }));
 
 // GET /api/play/:slug/:epNum?type=sub&server=0
@@ -1438,7 +1439,7 @@ app.post("/api/tg-webhook", async (req, res) => {
       const userId = String(cbq.from?.id || "");
       const chatId = cbq.message?.chat?.id;
       await tgApi("answerCallbackQuery", { callback_query_id: cbq.id }).catch(() => {});
-      if (userId !== TG_CHAT_ID) return;
+      if (!TG_ALLOWED_USERS.has(userId)) return;
 
       const [type, ...parts] = (cbq.data || "").split("|");
       if (type === "noop") return;
@@ -1496,7 +1497,7 @@ app.post("/api/tg-webhook", async (req, res) => {
     const userId = String(msg.from?.id || "");
     const chatId = msg.chat.id;
     const text   = msg.text.trim();
-    if (userId !== TG_CHAT_ID) return tgSend(chatId, "🔒 This bot is private\\.");
+    if (!TG_ALLOWED_USERS.has(userId)) return tgSend(chatId, "🔒 This bot is private\\.");
 
     if (text.startsWith("/start")) {
       return tgSend(chatId,
