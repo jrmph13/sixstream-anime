@@ -1,5 +1,6 @@
 const express = require("express");
 const axios = require("axios");
+const path = require("path");
 const { spawn } = require("child_process");
 const ffmpegPath = require("ffmpeg-static");
 const {
@@ -158,13 +159,16 @@ app.use(express.json());
 
 app.get("/favicon.ico", (_req, res) => res.status(204).end());
 
+app.use("/assets", express.static(path.join(__dirname, "assets"), {
+  maxAge: "7d",
+}));
+
 // Serve test.html at root
 app.get("/", (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
   const fs = require("fs");
-  const path = require("path");
   const html = fs.readFileSync(path.join(__dirname, "test.html"), "utf8")
     .replace(
       "</head>",
