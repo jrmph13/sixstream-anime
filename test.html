@@ -166,6 +166,16 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
 .cb-dur{position:absolute;bottom:5px;left:5px;background:rgba(0,0,0,.75);font-size:.6rem;padding:2px 5px;border-radius:3px;}
 .cb-views{position:absolute;bottom:5px;right:5px;background:rgba(0,0,0,.75);font-size:.6rem;padding:2px 5px;border-radius:3px;color:#fde68a;}
 .sub-c{color:#6ee7b7;}.dub-c{color:#93c5fd;}
+.wl-toggle{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .18s,transform .18s,border-color .18s;z-index:2;}
+.wl-toggle:hover{transform:scale(1.08);border-color:var(--accent);}
+.wl-toggle svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.2;}
+.wl-toggle.on{background:var(--accent);border-color:var(--accent);}
+.wl-toggle.on svg{fill:#fff;stroke:#fff;}
+.wl-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:.78rem;font-weight:700;cursor:pointer;transition:background .18s,border-color .18s;margin-top:10px;}
+.wl-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;}
+.wl-btn.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+.wl-btn.on svg{fill:#fff;}
+.wl-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:.86rem;}
 .ci{padding:7px 9px 9px;}
 .ci-t{font-size:.77rem;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .ci-s{font-size:.68rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -629,6 +639,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
     <button onclick="loadSec('popular')" id="nb-popular">Popular</button>
     <button onclick="loadSec('genres')"  id="nb-genres">Genres</button>
     <button onclick="loadTop10()"        id="nb-top10">Top 10</button>
+    <button onclick="loadWatchLater()"   id="nb-watchlater">Watch Later</button>
   </div>
 </nav>
 
@@ -669,6 +680,7 @@ main{max-width:1400px;margin:0 auto;padding:20px 16px;}
         <button onclick="loadSec('latest');closeDrawer()">Latest</button>
         <button onclick="loadSec('popular');closeDrawer()">Popular</button>
         <button onclick="loadSec('genres');closeDrawer()">Genres</button>
+        <button onclick="loadWatchLater();closeDrawer()">Watch Later</button>
         <button onclick="goHome();closeDrawer()">Home</button>
       </div>
     </div>
@@ -882,6 +894,47 @@ function initTheme(){
   setTheme(saved || (prefersLight?'light':'dark'));
 }
 
+const WL_KEY='sixstream-watchlater';
+
+function wlIcon(){
+  return '<svg viewBox="0 0 24 24"><path d="M12 2 15 8.5 22 9.3 17 14 18.3 21 12 17.6 5.7 21 7 14 2 9.3 9 8.5z"/></svg>';
+}
+
+function getWatchLater(){
+  try{ return JSON.parse(localStorage.getItem(WL_KEY))||[]; }catch(_){ return []; }
+}
+function saveWatchLater(list){
+  localStorage.setItem(WL_KEY, JSON.stringify(list));
+}
+function isInWatchLater(slug){
+  return getWatchLater().some(x=>x.slug===slug);
+}
+function toggleWatchLater(a){
+  const list=getWatchLater();
+  const idx=list.findIndex(x=>x.slug===a.slug);
+  let added;
+  if(idx>-1){ list.splice(idx,1); added=false; }
+  else{
+    list.unshift({
+      slug:a.slug, title:a.title, titleJP:a.titleJP, poster:a.poster,
+      type:a.type, score:a.score, aired:a.aired, sub:a.sub, dub:a.dub,
+      addedAt:Date.now()
+    });
+    added=true;
+  }
+  saveWatchLater(list);
+  syncWatchLaterUI(a.slug, added);
+  toast(added?'Added to Watch Later':'Removed from Watch Later', true);
+  return added;
+}
+function syncWatchLaterUI(slug, on){
+  document.querySelectorAll(`.wl-toggle[data-slug="${CSS.escape(slug)}"]`).forEach(b=>b.classList.toggle('on',on));
+  document.querySelectorAll(`.wl-btn[data-slug="${CSS.escape(slug)}"]`).forEach(b=>{
+    b.classList.toggle('on',on);
+    b.querySelector('span').textContent=on?'In Watch Later':'Watch Later';
+  });
+}
+
 function fmtViews(n){
   if(!n) return '';
   if(n>=1000000) return (n/1000000).toFixed(1)+'M';
@@ -905,11 +958,13 @@ function card(a){
     a.sub?`Sub ${a.sub}`:null,
     a.dub?`Dub ${a.dub}`:null,
   ].filter(Boolean).slice(0,3);
+  const inWL=isInWatchLater(a.slug);
   return `<div class="card" onclick="openModal('${safeslug}')">
     <div class="ct">
       <img src="${a.poster||''}" loading="lazy" onerror="this.style.opacity=0"/>
       ${a.type?`<span class="cb-type">${a.type}</span>`:''}
       ${sub||dub?`<div class="cb-ep">${sub}${dub}</div>`:''}
+      <div class="wl-toggle${inWL?' on':''}" data-slug="${safeslug}" title="${inWL?'Remove from':'Add to'} Watch Later" onclick="event.stopPropagation();toggleWatchLater(${JSON.stringify(a).replace(/&/g,'&amp;').replace(/"/g,'&quot;')})">${wlIcon()}</div>
     </div>
     <div class="ci">
       <div class="ci-t">${a.title||''}</div>
@@ -1116,6 +1171,31 @@ async function loadSec(name, page=1){
   }
 }
 
+function loadWatchLater(){
+  stopCurrentVideo();
+  showPage('home');
+  currentSection='watchlater'; currentPage=1;
+  document.querySelectorAll('.nbtns button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('nb-watchlater')?.classList.add('on');
+  const c=document.getElementById('home-content');
+  const list=getWatchLater();
+  if(!list.length){
+    c.innerHTML=`<div class="sec-hd"><h2>Watch Later (0)</h2></div>
+      <div class="wl-empty">Nothing saved yet. Tap the star on any anime to add it here.</div>`;
+    return;
+  }
+  c.innerHTML=`<div class="sec-hd"><h2>Watch Later (${list.length})</h2>
+    <button class="load-more-btn" onclick="clearWatchLater()">Clear All</button></div>
+    <div class="grid" id="g-watchlater">${list.map(card).join('')}</div>`;
+}
+
+function clearWatchLater(){
+  if(!confirm('Remove all items from Watch Later?')) return;
+  saveWatchLater([]);
+  loadWatchLater();
+  toast('Watch Later cleared', true);
+}
+
 async function loadGenre(id, el){
   document.querySelectorAll('.gp').forEach(p=>p.classList.remove('on'));
   el.classList.add('on');
@@ -1242,11 +1322,15 @@ async function openModal(slug){
     ['Genres', (info.genres||[]).slice(0,3).join(', ') || '-'],
   ];
 
+  const wlItem={slug, title:info.title, titleJP:info.titleJP, poster:info.poster, type:info.meta?.type, score:info.meta?.mal, aired:info.meta?.premiered, sub:eps.filter(e=>e.sub).length, dub:eps.filter(e=>e.dub).length};
+  const wlOn=isInWatchLater(slug);
+
   document.getElementById('modal-top').innerHTML=`
     <div class="modal-poster"><img src="${info.poster||''}" onerror="this.style.opacity=0" alt=""/></div>
     <div class="modal-info">
       <h2>${info.title||''}</h2>
       ${info.titleJP?`<div class="modal-jp">${info.titleJP}</div>`:''}
+      <button class="wl-btn${wlOn?' on':''}" data-slug="${slug}" onclick="toggleWatchLater(${JSON.stringify(wlItem).replace(/&/g,'&amp;').replace(/"/g,'&quot;')})">${wlIcon()}<span>${wlOn?'In Watch Later':'Watch Later'}</span></button>
       <div class="tags">${tags}</div>
       ${info.synopsis?`<div class="synopsis">${info.synopsis}</div>`:''}
       <div class="meta-g">
